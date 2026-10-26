@@ -1,6 +1,6 @@
 {
   "name": "Kuda Villingili Villa Status Board",
-  "short_name": "Villa Board",
+  "short_name": "KVM",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
