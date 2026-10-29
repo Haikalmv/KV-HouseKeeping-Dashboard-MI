@@ -80,6 +80,14 @@ h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
 .tile b{font-family:var(--f-display);font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
 .tile span{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.tile.tap{text-align:left;cursor:pointer}
+.tile.tap:hover{border-color:var(--accent)}
+.tl{display:grid;gap:6px}
+.tli{display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:center;gap:8px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;text-align:left}
+.tli:hover{border-color:var(--accent)}
+.tli .no{font-weight:700;font-variant-numeric:tabular-nums}
+.tli .chip{min-width:0;padding:1px 6px;font-size:11px}
+.tli .d{font-size:12px;color:var(--muted)}
 .dot{width:9px;height:9px;border-radius:50%;background:hsl(var(--h) 65% 48%);flex:none}
 .dot.outline{background:transparent;border:2px solid hsl(var(--h) 65% 48%)}
 .tile input{width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--f-display);font-weight:700;font-size:26px;padding:0;font-variant-numeric:tabular-nums;min-height:30px}
@@ -143,6 +151,13 @@ table.lv{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%
 .lv th,.lv td{padding:0;border-bottom:1px solid var(--line);border-right:1px solid var(--line);text-align:center;min-width:38px;height:40px}
 .lv th{background:var(--surface2);font-weight:600;line-height:1.1;position:sticky;top:0}
 .lv th small{display:block;font-weight:400;color:var(--muted);font-size:10px}
+.lvh{display:block;width:100%;height:100%;min-height:40px;border:0;background:none;padding:0;font-weight:inherit;line-height:inherit}
+.lvh:hover{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.lvk{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px 3px 4px;font-size:13px}
+.lvk:hover{border-color:var(--accent)}
+.tli.st:hover{border-color:var(--line)}
+.lvg{margin:14px 0 6px;font-size:14px}
+.lvg:first-of-type{margin-top:0}
 .lv th.today{background:var(--warm);color:#fff}
 .lv th.today small{color:#fff}
 .lv .stick{position:sticky;left:0;z-index:2;text-align:left;min-width:128px;max-width:160px;padding:0 10px;background:var(--surface);font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -245,10 +260,19 @@ table.lv{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%
 .supc .hbtns{margin-top:4px}
 .supc .nx{font-size:13px;font-weight:600;color:hsl(318 60% var(--cl-fg))}
 .supvl{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.sv{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:3px 4px 3px 7px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.sv{display:inline-flex;align-items:stretch;border:1px solid var(--line);background:var(--bg);border-radius:7px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
 .sv:hover{border-color:var(--accent)}
+.sv .svb{display:inline-flex;align-items:center;gap:5px;border:0;background:none;padding:3px 7px 3px 0;font-weight:inherit}
+.sv .tick{display:grid;place-items:center;width:34px;min-height:34px;border:0;background:none;padding:0;color:var(--muted)}
+.sv .tick i{display:grid;place-items:center;width:18px;height:18px;border:1.5px solid currentColor;border-radius:5px}
+.sv .tick svg{opacity:0}
+.sv.done .tick{color:var(--accent)}
+.sv.done .tick i{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.sv.done .tick svg{opacity:1}
+.sv.done .svb{opacity:.55}
+.sv.done .no{text-decoration:line-through}
 .sv .chip{min-width:0;padding:1px 6px;font-size:11px}
-.sv .eta{font-size:11px;font-weight:500;color:var(--muted);padding-right:3px}
+.sv .eta{font-size:11px;font-weight:500;color:var(--muted)}
 /* the next arrival blinks; with reduced motion it keeps the coloured border without blinking */
 .sv.hot{border:2px solid hsl(318 70% 52%);animation:arrblink 1.1s ease-in-out infinite}
 @keyframes arrblink{50%{background:hsl(318 80% 52% / .2);box-shadow:0 0 0 3px hsl(318 80% 52% / .35)}}
@@ -606,8 +630,8 @@ async function saveAll(){
 }
 
 /* ---------- loading ---------- */
-function newDay(){return {sec:{},sup:{},st:{},adult:'',child:'',infant:'',show:'',project:'',duty:[],g:{},fc:null}}
-function normDay(d){const n=newDay();return Object.assign(n,d||{},{sec:(d&&d.sec)||{},sup:(d&&d.sup)||{},st:migSt(d&&d.st),duty:(d&&d.duty)||[],g:(d&&d.g)||{},fc:(d&&d.fc)||null})}
+function newDay(){return {sec:{},sup:{},st:{},adult:'',child:'',infant:'',show:'',project:'',duty:[],g:{},fc:null,chk:{}}}
+function normDay(d){const n=newDay();return Object.assign(n,d||{},{sec:(d&&d.sec)||{},sup:(d&&d.sup)||{},st:migSt(d&&d.st),duty:(d&&d.duty)||[],g:(d&&d.g)||{},fc:(d&&d.fc)||null,chk:(d&&d.chk)||{}})}
 async function loadMonth(ym){
   if(S.months[ym])return;
   try{const m=await store.get('m-'+ym);S.months[ym]=(m&&m.cells)||{}}catch(e){S.months[ym]={}}
@@ -629,7 +653,7 @@ const ROLL={ARR:'OCC','B2B ARR':'OCC',VMI:'OCC','B2B MV':'OCC',DEP:'VAC',VMO:'VA
 function rollDay(d){
   Object.keys(d.st).forEach(k=>{if(ROLL[d.st[k]])d.st[k]=ROLL[d.st[k]]});
   const g={};Object.keys(d.g).forEach(k=>{if(d.st[k]==='OCC')g[k]=d.g[k]});
-  d.g=g;d.adult='';d.child='';d.infant='';d.fc=null;d.fcAuto=false;
+  d.g=g;d.adult='';d.child='';d.infant='';d.fc=null;d.fcAuto=false;d.chk={};
   return d;
 }
 function planStatus(d,date){
@@ -691,16 +715,36 @@ async function boot(){
 }
 
 /* ---------- derived ---------- */
+/* the summary boxes that open a list of their rooms, and the statuses each one counts */
+const TLIST={vac:{t:'Vacant rooms',c:['VAC','VC']},arr:{t:'Arrivals',c:ARRIVING},dep:{t:'Departures',c:DEPARTING},
+  vm:{t:'Room moves',c:['VMI','B2B MV']},ooo:{t:'Out of order',c:['OOO']},oos:{t:'Out of service',c:['OOS']}};
+function tileListHTML(k){
+  const T=TLIST[k],st=S.day.st,p=planOf(S.date),s=stats();
+  const secOf=v=>(SECTIONS.find(x=>x.villas.some(y=>y.id===v))||{}).title||'';
+  const detail=v=>{const a=p.arr[v],d=p.dep[v],t=[];
+    if(k==='arr'&&a){if(a.eta)t.push('ETA '+a.eta);if(a.ready)t.push('ready by '+a.ready);t.push(paxTxt(a))}
+    if(k==='dep'&&d){if(d.co)t.push('C/O '+d.co);if(d.out)t.push('leaves '+d.out)}
+    if(k==='vm'){const m=p.mv.find(x=>x.to===v);if(m)t.push('from '+vlabel(m.from)+(m.ci?' · C/I '+m.ci:''))}
+    t.push(secOf(v));return t.join(' · ')};
+  /* arrivals by ETA and departures by check-out time; the rest in board order */
+  const tkey=v=>{const r=k==='arr'?p.arr[v]:k==='dep'?p.dep[v]:null,m=r&&mins(k==='arr'?r.eta:r.co);return m==null?9999:m};
+  const ids=SELLABLE.filter(v=>T.c.includes(st[v]));
+  if(k==='arr'||k==='dep')ids.sort((a,b)=>tkey(a)-tkey(b));
+  const n=ids.length,fcN=s[k];
+  return '<p class="muted" style="margin:0 0 10px">'+n+(n===1?' room':' rooms')+' on the board'+(fcN!==n&&k!=='vac'?'. The report forecast says '+esc(fcN)+'.':'.')+' Tap a room for its details.</p>'+
+    (n?'<div class="tl">'+ids.map(v=>'<button class="tli" data-act="villa" data-v="'+esc(v)+'"><span class="no">'+esc(LABEL[v]||v)+'</span>'+chip(st[v])+'<span class="d">'+esc(detail(v))+'</span></button>').join('')+'</div>'
+     :'<p class="muted" style="margin:0">No rooms have this status.</p>');
+}
 function stats(){
-  const st=S.day.st;let occ=0,arr=0,dep=0,vm=0,ooo=0,oos=0;
+  const st=S.day.st;let occ=0,arr=0,dep=0,vm=0,ooo=0,oos=0,vac=0;
   SELLABLE.forEach(v=>{const c=st[v];if(!c)return;
-    if(OCCUPIED.includes(c))occ++;if(ARRIVING.includes(c))arr++;if(DEPARTING.includes(c))dep++;if(c==='VMI'||c==='B2B MV')vm++;if(c==='OOO')ooo++;if(c==='OOS')oos++});
+    if(TLIST.vac.c.includes(c))vac++;if(OCCUPIED.includes(c))occ++;if(ARRIVING.includes(c))arr++;if(DEPARTING.includes(c))dep++;if(c==='VMI'||c==='B2B MV')vm++;if(c==='OOO')ooo++;if(c==='OOS')oos++});
   const m=S.months[S.date.slice(0,7)]||{},day=+S.date.slice(8);let off=0,lv=0;
   S.staff.forEach(p=>{const c=(m[p.id]||{})[day];if(c==='OFF')off++;else if(c)lv++});
   const total=SELLABLE.length,fc=S.day.fc||{},pk=(a,b)=>(b!=null&&b!=='')?b:a;
   occ=pk(occ,fc.occupied);arr=pk(arr,fc.arr);dep=pk(dep,fc.dep);vm=pk(vm,fc.vm);ooo=pk(ooo,fc.ooo);oos=pk(oos,fc.oos);
   const pct=fc.pct!=null?fc.pct:Math.round(occ/total*100);
-  return {occ,arr,dep,vm,ooo,oos,total,pct,fromReport:!!S.day.fc,off,lv,duty:Math.max(0,S.staff.length-off-lv)};
+  return {occ,arr,dep,vm,ooo,oos,vac,total,pct,fromReport:!!S.day.fc,off,lv,duty:Math.max(0,S.staff.length-off-lv)};
 }
 
 /* ---------- views ---------- */
@@ -715,7 +759,8 @@ function headHTML(){
 }
 function boardHTML(){
   const s=stats(),d=S.day;
-  const tile=(n,label,h,o)=>'<div class="tile"><b>'+n+'</b><span><i class="dot'+(o?' outline':'')+'" style="--h:'+h+'"></i>'+label+'</span></div>';
+  const tile=(n,label,h,o,k)=>(k?'<button class="tile tap" data-act="tlist" data-k="'+k+'" aria-label="'+n+' '+label+'. Show the rooms">':'<div class="tile">')+
+    '<b>'+n+'</b><span><i class="dot'+(o?' outline':'')+'" style="--h:'+h+'"></i>'+label+'</span>'+(k?'</button>':'</div>');
   const inp=(f,l)=>'<div class="tile"><input id="'+f+'" inputmode="numeric" value="'+esc(d[f])+'" data-f="'+f+'" aria-label="'+l+'"><span>'+l+'</span></div>';
   const duty=d.duty.map(id=>S.staff.find(p=>p.id===id)).filter(Boolean);
   const avail=S.staff.filter(p=>!d.duty.includes(p.id));
@@ -723,7 +768,7 @@ function boardHTML(){
   return (S.note?'<div class="note"><span>'+esc(S.note)+'</span><button class="btn sm" data-act="dismiss">OK</button></div>':'')+
   '<div class="head"><h2>'+esc(fmtLong(S.date))+(isToday?' <span class="muted" style="font-size:14px;font-weight:500">today</span>':'')+'</h2><div class="hbtns"><button class="btn sm pri" data-act="kvm-pick">Import report</button><button class="btn sm'+(S.arm==='reset'?' warm':'')+'" data-act="reset">'+(S.arm==='reset'?'Tap again to clear all statuses':'Clear statuses')+'</button></div></div>'+
   '<div class="sum"><div class="occ"><div><small>Occupancy</small><div class="big">'+s.pct+'%</div></div><div><div class="meter"><i style="width:'+Math.min(100,s.pct)+'%"></i></div><small>'+s.occ+' villas occupied'+(s.fromReport?', from the report':' tonight, arrivals included')+'</small></div></div>'+
-  '<div class="tiles">'+'<div class="tile"><input id="occupied" inputmode="numeric" value="'+s.occ+'" data-f="occupied" aria-label="Villas occupied"><span><i class="dot" style="--h:205"></i>Villas occupied</span></div>'+tile(s.arr,'Arrivals',318)+tile(s.dep,'Departures',340)+tile(s.vm,'Room moves',268)+tile(s.ooo,'Out of order',0)+tile(s.oos,'Out of service',0,1)+
+  '<div class="tiles">'+'<div class="tile"><input id="occupied" inputmode="numeric" value="'+s.occ+'" data-f="occupied" aria-label="Villas occupied"><span><i class="dot" style="--h:205"></i>Villas occupied</span></div>'+tile(s.vac,'Vacant rooms',215,0,'vac')+tile(s.arr,'Arrivals',318,0,'arr')+tile(s.dep,'Departures',340,0,'dep')+tile(s.vm,'Room moves',268,0,'vm')+tile(s.ooo,'Out of order',0,0,'ooo')+tile(s.oos,'Out of service',0,1,'oos')+
   inp('adult','Adults in house')+inp('child','Children in house')+'<div class="tile"><b id="totalguests">'+((+d.adult||0)+(+d.child||0))+'</b><span><i class="dot" style="--h:205"></i>Total guests in house</span></div>'+
   tile(s.duty,'Staff on duty',200)+tile(s.off,'Staff day off',200)+tile(s.lv,'Staff on leave',150)+'</div></div>'+
   tomorrowBar()+
@@ -944,13 +989,22 @@ function butlerAll(){
 function supVillas(id){const o=[];SECTIONS.forEach(s=>s.villas.forEach(v=>{const p=supOf(v.id);if(id?(p&&p.id===id):!p)o.push(v)}));return o}
 /* minutes after midnight for a time such as 14:30 or 1430, or null when there is no time */
 const mins=t=>{const m=/^(\d{1,2}):?(\d{2})$/.exec(String(t||'').trim());return m?+m[1]*60+ +m[2]:null};
-/* the next guest to reach these villas: the earliest arrival ETA still to come. on a past date there is none */
+/* the next guest to reach these villas: the earliest arrival ETA still to come, skipping villas already ticked as checked. on a past date there is none */
 function nextArrival(ids){
   const today=iso(new Date());if(S.date<today)return null;
-  const p=planOf(S.date),n=new Date(),now=S.date===today?n.getHours()*60+n.getMinutes():-1;let best=null;
-  ids.forEach(v=>{const a=p.arr[v],t=a&&mins(a.eta);if(t==null||t<now)return;if(!best||t<best.t)best={v,t,eta:a.eta}});
+  const p=planOf(S.date),n=new Date(),now=S.date===today?n.getHours()*60+n.getMinutes():-1,chk=S.day.chk||{};let best=null;
+  ids.forEach(v=>{const a=p.arr[v],t=a&&mins(a.eta);if(t==null||t<now||chk[v])return;if(!best||t<best.t)best={v,t,eta:a.eta}});
   return best;
 }
+/* every time planned for a villa on this day: check-out, move check-out and check-in, arrival ETA */
+function svTimes(id,p){
+  const t=[],r=p.dep[id],a=p.arr[id];
+  if(r&&r.co)t.push('C/O '+r.co);
+  p.mv.forEach(m=>{if(m.from===id&&m.co)t.push('C/O '+m.co);if(m.to===id&&m.ci)t.push('C/I '+m.ci)});
+  if(a&&a.eta)t.push('ETA '+a.eta);
+  return t.filter((x,i)=>t.indexOf(x)===i).join(' · ');
+}
+const ICON_TICK='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 function supHTML(){
   const sups=supList(),d=S.day,isToday=S.date===iso(new Date());
   const head='<div class="head"><h2>'+esc(fmtLong(S.date))+(isToday?' <span class="muted" style="font-size:14px;font-weight:500">today</span>':'')+'</h2>'+
@@ -962,12 +1016,14 @@ function supHTML(){
   const card=x=>{const vs=supVillas(x.id),ids=vs.map(v=>v.id),ar=ids.filter(v=>p.arr[v]).length,dp=ids.filter(v=>p.dep[v]).length,mv=p.mv.filter(m=>ids.includes(m.from)||ids.includes(m.to)).length,
       oc=ids.filter(v=>OCCUPIED.includes(d.st[v])).length,off=offOn(x.id,S.date),t=[];
     if(ar)t.push(ar+(ar===1?' arrival':' arrivals'));if(dp)t.push(dp+(dp===1?' departure':' departures'));if(mv)t.push(mv+(mv===1?' move':' moves'));
-    const nx=nextArrival(ids);
-    const rooms=vs.map(v=>{const a=p.arr[v.id],hot=nx&&nx.v===v.id;
-      return '<button class="sv'+(hot?' hot':'')+'" data-act="status" data-v="'+esc(v.id)+'" aria-label="Status for '+esc(v.label)+(hot?', next arrival':'')+'"><span class="no">'+esc(v.label)+'</span>'+chip(d.st[v.id])+(a&&a.eta?'<span class="eta">'+esc(a.eta)+'</span>':'')+'</button>'}).join('');
+    const nx=nextArrival(ids),chk=d.chk||{},done=ids.filter(v=>chk[v]).length;
+    const rooms=vs.map(v=>{const hot=nx&&nx.v===v.id,on=!!chk[v.id],tm=svTimes(v.id,p);
+      return '<div class="sv'+(hot?' hot':'')+(on?' done':'')+'"><button class="tick" data-act="sv-chk" data-v="'+esc(v.id)+'" aria-pressed="'+on+'" aria-label="'+esc(v.label)+' checked"><i>'+ICON_TICK+'</i></button>'+
+        '<button class="svb" data-act="status" data-v="'+esc(v.id)+'" aria-label="Status for '+esc(v.label)+(hot?', next arrival':'')+'"><span class="no">'+esc(v.label)+'</span>'+chip(d.st[v.id])+(tm?'<span class="eta">'+esc(tm)+'</span>':'')+'</button></div>'}).join('');
     return '<div class="supc" style="--h:'+supHue(x.id)+'"><div class="nm"><span>'+esc(x.name||'Unnamed')+'</span><b>'+vs.length+'</b></div>'+
       '<div class="ln">'+(vs.length?(vs.length===1?'villa, ':'villas, ')+oc+' occupied':'No villas yet')+'</div>'+
       (t.length?'<div class="ln">Today: '+t.join(', ')+'</div>':'')+
+      (vs.length?'<div class="ln">Checked: '+done+' of '+vs.length+'</div>':'')+
       (nx?'<div class="nx">Next arrival: '+esc(LABEL[nx.v]||nx.v)+' at '+esc(nx.eta)+'</div>':'')+
       (rooms?'<div class="supvl">'+rooms+'</div>':'')+
       (off?'<div class="off">'+off+' on this date</div>':'')+
@@ -1036,7 +1092,7 @@ function leaveHTML(){
   const todayIso=iso(new Date());
   const names=['SUN','MON','TUE','WED','THU','FRI','SAT'];
   let th='<th class="stick">Name</th>';
-  for(let d=1;d<=days;d++){const dt=new Date(y,m-1,d),t=iso(dt)===todayIso;th+='<th class="'+(t?'today':'')+'">'+d+'<small>'+names[dt.getDay()]+'</small></th>'}
+  for(let d=1;d<=days;d++){const dt=new Date(y,m-1,d),t=iso(dt)===todayIso;th+='<th class="'+(t?'today':'')+'"><button class="lvh" data-act="lv-day" data-d="'+iso(dt)+'" aria-label="Who is off on '+esc(fmtLong(iso(dt)))+'">'+d+'<small>'+names[dt.getDay()]+'</small></button></th>'}
   const body=S.staff.map(p=>{let r='<td class="stick">'+esc(p.name)+'</td>';
     for(let d=1;d<=days;d++){const c=(cells[p.id]||{})[d],t=iso(new Date(y,m-1,d))===todayIso;
       r+='<td class="'+(t?'today':'')+'"><button class="lc'+(c?'':' e')+'" data-act="leave" data-s="'+p.id+'" data-d="'+d+'" aria-label="'+esc(p.name)+', day '+d+(c?', '+LMAP[c].label:'')+'">'+(c?chip(c,LMAP):'')+'</button></td>'}
@@ -1051,8 +1107,37 @@ function leaveHTML(){
     '<div class="hbtns"><button class="btn pri" data-act="lv-apply">Apply to these days</button><button class="btn" data-act="lv-clear">Clear these days</button></div></div>';
   return '<div class="head"><div class="mnav"><button class="btn" data-act="mprev" aria-label="Previous month">&lsaquo;</button><h2>'+mname+'</h2><button class="btn" data-act="mnext" aria-label="Next month">&rsaquo;</button><button class="btn pri" data-act="mtoday">This month</button></div></div>'+
    (S.staff.length?form+'<div class="tw"><table class="lv"><thead><tr>'+th+'</tr></thead><tbody>'+body+'</tbody></table></div>':'<div class="note">Add your staff on the Staff tab first.</div>')+
-   '<div class="chips">'+LEAVE.map(c=>'<span>'+chip(c[0],LMAP)+' <span class="muted">'+c[1]+'</span></span>').join('')+'</div>'+
-   '<p class="muted" style="margin:0;font-size:13px">Tap a single cell to set one day, or use the form for a range. Day off and leave feed the staff counts on the Board.</p>';
+   '<div class="chips">'+LEAVE.map(c=>'<button class="lvk" data-act="lv-code" data-c="'+c[0]+'">'+chip(c[0],LMAP)+' <span class="muted">'+c[1]+'</span></button>').join('')+'</div>'+
+   '<p class="muted" style="margin:0;font-size:13px">Tap a single cell to set one day, or use the form for a range. Tap a date to see who is off that day, or a leave type to see everyone on it this month. Day off and leave feed the staff counts on the Board.</p>';
+}
+/* ---------- who is off ---------- */
+const lvCode=(sid,d)=>((S.months[d.slice(0,7)]||{})[sid]||{})[+d.slice(8)]||'';
+/* the whole stretch of the same leave around a day, running into the months that are loaded */
+function lvRun(sid,d){
+  const c=lvCode(sid,d);let a=d,b=d,n=0;
+  if(!c)return {c,from:d,to:d};
+  while(n++<366&&lvCode(sid,addDays(a,-1))===c)a=addDays(a,-1);
+  n=0;while(n++<366&&lvCode(sid,addDays(b,1))===c)b=addDays(b,1);
+  return {c,from:a,to:b};
+}
+const lvSpan=r=>{const n=Math.round((parse(r.to)-parse(r.from))/864e5)+1;return r.from===r.to?fmtShort(r.from)+' only':fmtShort(r.from)+' to '+fmtShort(r.to)+' · '+n+' days'};
+/* the month before and after, so leave that crosses a month end shows its real start and end */
+const lvLoadNear=ym=>Promise.all([loadMonth(ym),loadMonth(addDays(ym+'-01',-1).slice(0,7)),loadMonth(addDays(ym+'-01',32).slice(0,7))]);
+const lvRow=(p,r)=>'<div class="tli st"><span class="no">'+esc(p.name||'Unnamed')+'</span>'+chip(r.c,LMAP)+'<span class="d">'+esc(lvSpan(r))+' · '+esc((RANKS.find(k=>k[0]===rankOf(p))||[0,'Room attendant'])[1])+'</span></div>';
+function lvDayHTML(d){
+  const off=S.staff.map(p=>({p,r:lvRun(p.id,d)})).filter(x=>x.r.c);
+  const groups=LEAVE.map(c=>{const g=off.filter(x=>x.r.c===c[0]);return g.length?'<h3 class="lvg">'+esc(c[1])+' <span class="muted">'+g.length+'</span></h3><div class="tl">'+g.map(x=>lvRow(x.p,x.r)).join('')+'</div>':''}).join('');
+  return '<p class="muted" style="margin:0 0 10px">'+off.length+' of '+S.staff.length+' staff off, '+(S.staff.length-off.length)+' working.</p>'+
+    (groups||'<p class="muted" style="margin:0">Nobody is off on this day.</p>');
+}
+function lvCodeHTML(code){
+  const [y,m]=S.month.split('-').map(Number),days=new Date(y,m,0).getDate(),out=[];let total=0;
+  S.staff.forEach(p=>{for(let d=1;d<=days;d++){const di=S.month+'-'+String(d).padStart(2,'0');if(lvCode(p.id,di)!==code)continue;total++;
+    if(d===1||lvCode(p.id,addDays(di,-1))!==code)out.push({p,r:lvRun(p.id,di)})}});
+  out.sort((a,b)=>a.r.from<b.r.from?-1:a.r.from>b.r.from?1:0);
+  const ppl=new Set(out.map(x=>x.p.id)).size;
+  return '<p class="muted" style="margin:0 0 10px">'+ppl+(ppl===1?' person, ':' people, ')+total+(total===1?' day':' days')+' in '+esc(new Date(y,m-1,1).toLocaleDateString('en-GB',{month:'long'}))+'. Dates show the whole stretch, even where it runs into another month.</p>'+
+    (out.length?'<div class="tl">'+out.map(x=>lvRow(x.p,x.r)).join('')+'</div>':'<p class="muted" style="margin:0">Nobody has this in '+esc(new Date(y,m-1,1).toLocaleDateString('en-GB',{month:'long'}))+'.</p>');
 }
 function staffHTML(){
   const row=p=>'<div class="srow"><input type="text" id="sn-'+p.id+'" data-f="sname" data-id="'+p.id+'" value="'+esc(p.name)+'" placeholder="Name" aria-label="Name">'+
@@ -1399,6 +1484,10 @@ document.addEventListener('click',e=>{
   else if(a==='reset'){if(S.arm==='reset'){S.day.st={};S.arm=null;touch('d-'+S.date)}else S.arm='reset';render()}
   else if(a==='copy')copyText(b.dataset.copy);
   else if(a==='status')openStatus(b.dataset.v);
+  else if(a==='lv-day'){const d=b.dataset.d;lvLoadNear(S.month).then(()=>openInfo(fmtLong(d),lvDayHTML(d)))}
+  else if(a==='lv-code'){const c=b.dataset.c;lvLoadNear(S.month).then(()=>openInfo(LMAP[c].label+', '+new Date(S.month+'-01T00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'}),lvCodeHTML(c)))}
+  else if(a==='sv-chk'){const c=S.day.chk||(S.day.chk={}),v=b.dataset.v;if(c[v])delete c[v];else c[v]=1;touch('d-'+S.date);render()}
+  else if(a==='tlist'&&TLIST[b.dataset.k])openInfo(TLIST[b.dataset.k].t,tileListHTML(b.dataset.k));
   else if(a==='villa'){S.dirty=false;openInfo('Villa '+(LABEL[b.dataset.v]||b.dataset.v),villaHTML(b.dataset.v))}
   else if(a==='vstatus'){const v=b.dataset.v;closePicker();openStatus(v)}
   else if(a==='vmove'){const v=b.dataset.v,cur=SECTIONS.find(x=>x.villas.some(y=>y.id===v));openInfo('Move villa '+(LABEL[v]||v),'<p class="muted" style="margin:0 0 10px">Choose the section for this villa. It stays there every day until you move it again.</p><div class="opts">'+SECTIONS.map(x=>'<button class="opt" data-act="vmove-to" data-v="'+esc(v)+'" data-n="'+x.n+'" aria-pressed="'+(cur&&cur.n===x.n)+'"><span class="l" style="color:var(--fg);font-weight:600">'+x.title+'</span></button>').join('')+'</div>'+(LAYOUT[v]?'<div style="margin-top:12px"><button class="btn sm" data-act="vorig" data-v="'+esc(v)+'">Back to original section</button></div>':''))}
