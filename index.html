@@ -770,7 +770,7 @@ function boardHTML(){
   '<div class="sum"><div class="occ"><div><small>Occupancy</small><div class="big">'+s.pct+'%</div></div><div><div class="meter"><i style="width:'+Math.min(100,s.pct)+'%"></i></div><small>'+s.occ+' villas occupied'+(s.fromReport?', from the report':' tonight, arrivals included')+'</small></div></div>'+
   '<div class="tiles">'+'<div class="tile"><input id="occupied" inputmode="numeric" value="'+s.occ+'" data-f="occupied" aria-label="Villas occupied"><span><i class="dot" style="--h:205"></i>Villas occupied</span></div>'+tile(s.vac,'Vacant rooms',215,0,'vac')+tile(s.arr,'Arrivals',318,0,'arr')+tile(s.dep,'Departures',340,0,'dep')+tile(s.vm,'Room moves',268,0,'vm')+tile(s.ooo,'Out of order',0,0,'ooo')+tile(s.oos,'Out of service',0,1,'oos')+
   inp('adult','Adults in house')+inp('child','Children in house')+'<div class="tile"><b id="totalguests">'+((+d.adult||0)+(+d.child||0))+'</b><span><i class="dot" style="--h:205"></i>Total guests in house</span></div>'+
-  tile(s.duty,'Staff on duty',200)+tile(s.off,'Staff day off',200)+tile(s.lv,'Staff on leave',150)+'</div></div>'+
+  tile(s.duty,'Staff on duty',200,0,'sduty')+tile(s.off,'Staff day off',200,0,'soff')+tile(s.lv,'Staff on leave',150,0,'slv')+'</div></div>'+
   tomorrowBar()+
   '<div class="panels"><div class="panel"><h2>Show villas</h2><input type="text" id="show" data-f="show" value="'+esc(d.show)+'" placeholder="e.g. 1011, 1017"></div>'+
   '<div class="panel"><h2>Project of the week</h2><input type="text" id="project" data-f="project" value="'+esc(d.project)+'" placeholder="What is the focus this week?"></div>'+
@@ -1106,7 +1106,7 @@ function leaveHTML(){
     '<label>Type<select id="lv-t">'+LEAVE.map(c=>'<option value="'+c[0]+'"'+(lf.t===c[0]?' selected':'')+'>'+c[1]+'</option>').join('')+'</select></label></div>'+
     '<div class="hbtns"><button class="btn pri" data-act="lv-apply">Apply to these days</button><button class="btn" data-act="lv-clear">Clear these days</button></div></div>';
   return '<div class="head"><div class="mnav"><button class="btn" data-act="mprev" aria-label="Previous month">&lsaquo;</button><h2>'+mname+'</h2><button class="btn" data-act="mnext" aria-label="Next month">&rsaquo;</button><button class="btn pri" data-act="mtoday">This month</button></div></div>'+
-   (S.staff.length?form+'<div class="tw"><table class="lv"><thead><tr>'+th+'</tr></thead><tbody>'+body+'</tbody></table></div>':'<div class="note">Add your staff on the Staff tab first.</div>')+
+   (S.staff.length?form+'<div class="tw" id="lvtw" data-m="'+S.month+'"><table class="lv"><thead><tr>'+th+'</tr></thead><tbody>'+body+'</tbody></table></div>':'<div class="note">Add your staff on the Staff tab first.</div>')+
    '<div class="chips">'+LEAVE.map(c=>'<button class="lvk" data-act="lv-code" data-c="'+c[0]+'">'+chip(c[0],LMAP)+' <span class="muted">'+c[1]+'</span></button>').join('')+'</div>'+
    '<p class="muted" style="margin:0;font-size:13px">Tap a single cell to set one day, or use the form for a range. Tap a date to see who is off that day, or a leave type to see everyone on it this month. Day off and leave feed the staff counts on the Board.</p>';
 }
@@ -1124,11 +1124,19 @@ const lvSpan=r=>{const n=Math.round((parse(r.to)-parse(r.from))/864e5)+1;return 
 /* the month before and after, so leave that crosses a month end shows its real start and end */
 const lvLoadNear=ym=>Promise.all([loadMonth(ym),loadMonth(addDays(ym+'-01',-1).slice(0,7)),loadMonth(addDays(ym+'-01',32).slice(0,7))]);
 const lvRow=(p,r)=>'<div class="tli st"><span class="no">'+esc(p.name||'Unnamed')+'</span>'+chip(r.c,LMAP)+'<span class="d">'+esc(lvSpan(r))+' · '+esc((RANKS.find(k=>k[0]===rankOf(p))||[0,'Room attendant'])[1])+'</span></div>';
-function lvDayHTML(d){
-  const off=S.staff.map(p=>({p,r:lvRun(p.id,d)})).filter(x=>x.r.c);
+/* who is off on a day. only='off' lists day offs, only='lv' every other kind of leave */
+function lvDayHTML(d,only){
+  const all=S.staff.map(p=>({p,r:lvRun(p.id,d)})).filter(x=>x.r.c),off=all.filter(x=>!only||(only==='off')===(x.r.c==='OFF'));
   const groups=LEAVE.map(c=>{const g=off.filter(x=>x.r.c===c[0]);return g.length?'<h3 class="lvg">'+esc(c[1])+' <span class="muted">'+g.length+'</span></h3><div class="tl">'+g.map(x=>lvRow(x.p,x.r)).join('')+'</div>':''}).join('');
-  return '<p class="muted" style="margin:0 0 10px">'+off.length+' of '+S.staff.length+' staff off, '+(S.staff.length-off.length)+' working.</p>'+
-    (groups||'<p class="muted" style="margin:0">Nobody is off on this day.</p>');
+  return '<p class="muted" style="margin:0 0 10px">'+(only?off.length+(off.length===1?' person':' people')+(only==='off'?' on a day off. ':' on leave. '):'')+all.length+' of '+S.staff.length+' staff off, '+(S.staff.length-all.length)+' working.</p>'+
+    (groups||'<p class="muted" style="margin:0">'+(only==='off'?'Nobody has a day off':only?'Nobody is on leave':'Nobody is off')+' on this day.</p>');
+}
+/* everyone working on a day, by role */
+function dutyHTML(d){
+  const on=S.staff.filter(p=>!lvCode(p.id,d));
+  const groups=RANKS.map(r=>{const g=on.filter(p=>rankOf(p)===r[0]);return g.length?'<h3 class="lvg">'+esc(r[2])+' <span class="muted">'+g.length+'</span></h3><div class="tl">'+g.map(p=>'<div class="tli st"><span class="no">'+esc(p.name||'Unnamed')+'</span><span></span><span class="d">'+esc(p.phone||'')+'</span></div>').join('')+'</div>':''}).join('');
+  return '<p class="muted" style="margin:0 0 10px">'+on.length+' of '+S.staff.length+' staff working. Day offs and leave are taken from the Leave tab.</p>'+
+    (groups||'<p class="muted" style="margin:0">Nobody is working on this day.</p>');
 }
 function lvCodeHTML(code){
   const [y,m]=S.month.split('-').map(Number),days=new Date(y,m,0).getDate(),out=[];let total=0;
@@ -1433,7 +1441,16 @@ function render(){
   const app=$('#app');
   app.setAttribute('aria-busy',String(!S.ready));
   if(!S.day){app.innerHTML='<div class="note">Loading your board…</div>';return}
+  const old=$('#lvtw'),keep=old&&!S.lvJump&&old.dataset.m===S.month?old.scrollLeft:null;S.lvJump=false;
   app.innerHTML=S.tab==='board'?boardHTML():S.tab==='move'?moveHTML():S.tab==='sup'?supHTML():S.tab==='but'?butlerHTML():S.tab==='leave'?leaveHTML():staffHTML();
+  if(S.tab==='leave')lvScroll(keep);
+}
+/* the leave table opens with today in the first column after the names; earlier days are a scroll to the left. redraws keep the scroll where it was */
+function lvScroll(keep){
+  const w=$('#lvtw');if(!w)return;
+  if(keep!=null){w.scrollLeft=keep;return}
+  const t=w.querySelector('th.today'),n=w.querySelector('th.stick');
+  w.scrollLeft=t&&n?t.offsetLeft-n.offsetWidth:0;
 }
 
 /* ---------- picker + toast ---------- */
@@ -1484,6 +1501,8 @@ document.addEventListener('click',e=>{
   else if(a==='reset'){if(S.arm==='reset'){S.day.st={};S.arm=null;touch('d-'+S.date)}else S.arm='reset';render()}
   else if(a==='copy')copyText(b.dataset.copy);
   else if(a==='status')openStatus(b.dataset.v);
+  else if(a==='tlist'&&/^s(duty|off|lv)$/.test(b.dataset.k)){const k=b.dataset.k,d=S.date;
+    lvLoadNear(d.slice(0,7)).then(()=>openInfo((k==='sduty'?'Staff on duty':k==='soff'?'Staff day off':'Staff on leave')+', '+fmtShort(d),k==='sduty'?dutyHTML(d):lvDayHTML(d,k.slice(1))))}
   else if(a==='lv-day'){const d=b.dataset.d;lvLoadNear(S.month).then(()=>openInfo(fmtLong(d),lvDayHTML(d)))}
   else if(a==='lv-code'){const c=b.dataset.c;lvLoadNear(S.month).then(()=>openInfo(LMAP[c].label+', '+new Date(S.month+'-01T00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'}),lvCodeHTML(c)))}
   else if(a==='sv-chk'){const c=S.day.chk||(S.day.chk={}),v=b.dataset.v;if(c[v])delete c[v];else c[v]=1;touch('d-'+S.date);render()}
@@ -1514,7 +1533,7 @@ document.addEventListener('click',e=>{
   else if(a==='mprev'||a==='mnext'||a==='mtoday'){
     const [y,m]=S.month.split('-').map(Number);
     const nd=a==='mtoday'?new Date():new Date(y,m-1+(a==='mnext'?1:-1),1);
-    S.month=iso(nd).slice(0,7);loadMonth(S.month).then(render);render();
+    S.month=iso(nd).slice(0,7);if(a==='mtoday')S.lvJump=true;loadMonth(S.month).then(render);render();
   }
   else if(a==='sup-villa')supPick(b.dataset.v);
   else if(a==='supv-pick'){const v=b.dataset.v;if(b.dataset.id)S.day.sup[v]=b.dataset.id;else delete S.day.sup[v];touch('d-'+S.date);closePicker();render()}
