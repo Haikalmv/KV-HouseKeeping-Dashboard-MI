@@ -94,8 +94,12 @@ h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance}
 
 /* info panels */
 .vfind{display:grid;gap:8px}
-.vfind input{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;min-height:44px;width:100%;font-size:16px}
-.vfind input:focus{border-color:var(--accent);outline:2px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+/* Search01 icon from Hugeicons free set, MIT licence, Copyright (c) 2025 Hugeicons */
+.fbar{display:flex;align-items:center;gap:10px;border:2px solid var(--accent);background:var(--surface);border-radius:12px;padding:0 14px;min-height:50px;color:var(--accent);box-shadow:var(--shadow);cursor:text}
+.fbar:focus-within{outline:3px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.fbar svg{flex:none}
+.fbar input{flex:1;min-width:0;border:0;background:none;padding:10px 0;font-size:17px;color:var(--fg);outline:0}
+.fbar input::placeholder{color:var(--muted)}
 .fpick{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .fpick .mini{padding:5px 10px;font-size:13px;font-weight:600}
 .fnone{margin:0}
@@ -782,7 +786,7 @@ function boardHTML(){
   const isToday=S.date===iso(new Date());
   return (S.note?'<div class="note"><span>'+esc(S.note)+'</span><button class="btn sm" data-act="dismiss">OK</button></div>':'')+
   '<div class="head"><h2>'+esc(fmtLong(S.date))+(isToday?' <span class="muted" style="font-size:14px;font-weight:500">today</span>':'')+'</h2><div class="hbtns"><button class="btn sm pri" data-act="kvm-pick">Import report</button><button class="btn sm'+(S.arm==='reset'?' warm':'')+'" data-act="reset">'+(S.arm==='reset'?'Tap again to clear all statuses':'Clear statuses')+'</button></div></div>'+
-  '<div class="vfind"><input type="search" id="vsearch" data-f="vsearch" inputmode="numeric" autocomplete="off" value="'+esc(S.q||'')+'" placeholder="Search a room number, e.g. 2030" aria-label="Search a room number"><div id="vsres" aria-live="polite">'+findHTML(S.q)+'</div></div>'+
+  '<div class="vfind"><label class="fbar"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M17.5 17.5L22 22" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 11C20 6.02944 15.9706 2 11 2C6.02944 2 2 6.02944 2 11C2 15.9706 6.02944 20 11 20C15.9706 20 20 15.9706 20 11Z" stroke-linejoin="round"/></svg><input type="search" id="vsearch" data-f="vsearch" inputmode="numeric" autocomplete="off" value="'+esc(S.q||'')+'" placeholder="Search a room number, e.g. 2030" aria-label="Search a room number"></label><div id="vsres" aria-live="polite">'+findHTML(S.q)+'</div></div>'+
   '<div class="sum"><div class="occ"><div><small>Occupancy</small><div class="big">'+s.pct+'%</div></div><div><div class="meter"><i style="width:'+Math.min(100,s.pct)+'%"></i></div><small>'+s.occ+' villas occupied'+(s.fromReport?', from the report':' tonight, arrivals included')+'</small></div></div>'+
   '<div class="tiles">'+'<div class="tile"><input id="occupied" inputmode="numeric" value="'+s.occ+'" data-f="occupied" aria-label="Villas occupied"><span><i class="dot" style="--h:205"></i>Villas occupied</span></div>'+tile(s.vac,'Vacant rooms',215,0,'vac')+tile(s.arr,'Arrivals',318,0,'arr')+tile(s.dep,'Departures',340,0,'dep')+tile(s.vm,'Room moves',268,0,'vm')+tile(s.ooo,'Out of order',0,0,'ooo')+tile(s.oos,'Out of service',0,1,'oos')+
   inp('adult','Adults in house')+inp('child','Children in house')+'<div class="tile"><b id="totalguests">'+((+d.adult||0)+(+d.child||0))+'</b><span><i class="dot" style="--h:205"></i>Total guests in house</span></div>'+
