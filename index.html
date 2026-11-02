@@ -93,6 +93,21 @@ h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance}
 .tile input{width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--f-display);font-weight:700;font-size:26px;padding:0;font-variant-numeric:tabular-nums;min-height:30px}
 
 /* info panels */
+.vfind{display:grid;gap:8px}
+.vfind input{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;min-height:44px;width:100%;font-size:16px}
+.vfind input:focus{border-color:var(--accent);outline:2px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.fpick{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fpick .mini{padding:5px 10px;font-size:13px;font-weight:600}
+.fnone{margin:0}
+.fcard{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px;display:grid;gap:4px;box-shadow:var(--shadow)}
+.fcard h4{margin:8px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.fhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fhead b{font-size:20px;font-variant-numeric:tabular-nums}
+.fhead .btn{margin-left:auto}
+.fline{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;font-size:14px;padding:3px 0;border-bottom:1px solid var(--line)}
+.fline:last-child{border-bottom:0}
+.fline .tag{font-size:11px}
+.warnt{color:var(--warm);font-weight:600}
 .panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
 .panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500}
@@ -767,6 +782,7 @@ function boardHTML(){
   const isToday=S.date===iso(new Date());
   return (S.note?'<div class="note"><span>'+esc(S.note)+'</span><button class="btn sm" data-act="dismiss">OK</button></div>':'')+
   '<div class="head"><h2>'+esc(fmtLong(S.date))+(isToday?' <span class="muted" style="font-size:14px;font-weight:500">today</span>':'')+'</h2><div class="hbtns"><button class="btn sm pri" data-act="kvm-pick">Import report</button><button class="btn sm'+(S.arm==='reset'?' warm':'')+'" data-act="reset">'+(S.arm==='reset'?'Tap again to clear all statuses':'Clear statuses')+'</button></div></div>'+
+  '<div class="vfind"><input type="search" id="vsearch" data-f="vsearch" inputmode="numeric" autocomplete="off" value="'+esc(S.q||'')+'" placeholder="Search a room number, e.g. 2030" aria-label="Search a room number"><div id="vsres" aria-live="polite">'+findHTML(S.q)+'</div></div>'+
   '<div class="sum"><div class="occ"><div><small>Occupancy</small><div class="big">'+s.pct+'%</div></div><div><div class="meter"><i style="width:'+Math.min(100,s.pct)+'%"></i></div><small>'+s.occ+' villas occupied'+(s.fromReport?', from the report':' tonight, arrivals included')+'</small></div></div>'+
   '<div class="tiles">'+'<div class="tile"><input id="occupied" inputmode="numeric" value="'+s.occ+'" data-f="occupied" aria-label="Villas occupied"><span><i class="dot" style="--h:205"></i>Villas occupied</span></div>'+tile(s.vac,'Vacant rooms',215,0,'vac')+tile(s.arr,'Arrivals',318,0,'arr')+tile(s.dep,'Departures',340,0,'dep')+tile(s.vm,'Room moves',268,0,'vm')+tile(s.ooo,'Out of order',0,0,'ooo')+tile(s.oos,'Out of service',0,1,'oos')+
   inp('adult','Adults in house')+inp('child','Children in house')+'<div class="tile"><b id="totalguests">'+((+d.adult||0)+(+d.child||0))+'</b><span><i class="dot" style="--h:205"></i>Total guests in house</span></div>'+
@@ -893,10 +909,43 @@ function villaHTML(id){
    (showB?'<h4>Butler</h4><input type="text" id="vbutler" data-f="gtx" data-v="'+esc(id)+'" data-p="butler" value="'+esc(g.butler||'')+'" placeholder="Butler name" aria-label="Butler for this villa">'+
    '<div class="contact" id="vbutlerc">'+butlerContact(g.butler)+'</div>':'')+
    '<h4>Guests in villa</h4><div class="mvt">'+num('ad','Adults')+num('ch','Children')+num('inf','Infants')+'</div>'+
-   '<h4>Stay</h4><div class="mvt"><label>Arrival date<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="arrD" value="'+esc(g.arrD||'')+'" placeholder="e.g. 22 Oct"></label><label>Departure date<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="depD" value="'+esc(g.depD||'')+'" placeholder="e.g. 1 Nov"></label><label>VIP level<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="vip" value="'+esc(g.vip||'')+'" placeholder="e.g. V03"></label></div>'+
+   '<h4>Stay</h4><div class="mvt"><label>Arrival date<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="arrD" value="'+esc(g.arrD||'')+'" placeholder="e.g. 22 Oct"></label><label>Departure date<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="depD" value="'+esc(g.depD||'')+'" placeholder="e.g. 1 Nov"></label><label>VIP level<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="vip" value="'+esc(g.vip||'')+'" placeholder="e.g. V03"></label><label>Country<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="nat" value="'+esc(g.nat||'')+'" placeholder="e.g. GB"></label></div>'+
    '<h4>Remarks (birthday, anniversary, honeymoon, requests)</h4><textarea id="vrem" rows="3" data-f="grem" data-v="'+esc(id)+'" placeholder="Honeymoon, anniversary, birthday, VIPs or any special request for housekeeping">'+esc(g.rem||'')+'</textarea>'+
    (items.length?'<h4>Arrival, departure and moves</h4><div class="mvline">'+items.map(x=>'<div class="mv" style="--h:'+x.h+'">'+x.t+(x.d?' <i>(draft)</i>':'')+'</div>').join('')+'</div>':'')+
    '<h4>Section</h4><div class="vrow"><select id="vsec" data-f="vsec" data-v="'+esc(id)+'" aria-label="Move villa to another section">'+SECTIONS.map(s=>'<option value="'+s.n+'"'+(sec&&s.n===sec.n?' selected':'')+'>'+s.title+'</option>').join('')+'</select>'+(LAYOUT[id]?'<button class="btn sm" data-act="vorig" data-v="'+esc(id)+'">Back to original</button>':'')+'</div>'+duDel+'</div>';
+}
+/* ---------- room search ---------- */
+/* a two-letter country code from the report reads as the country name; anything else shows as the report gave it */
+function natName(t){
+  t=String(t||'').trim();if(!/^[A-Za-z]{2}$/.test(t))return t;
+  try{return new Intl.DisplayNames(['en'],{type:'region'}).of(t.toUpperCase())||t}catch(e){return t}
+}
+const staffLine=(role,p,note)=>'<div class="fline"><span class="muted">'+role+'</span><span>'+(p?esc(p.name||'Unnamed')+(note?' <span class="warnt">('+note+')</span>':'')+(p.phone?' · <a class="ph" href="tel:'+esc(p.phone)+'">'+esc(p.phone)+'</a>':''):'<span class="muted">Not assigned</span>')+'</span></div>';
+function findHTML(q){
+  q=String(q||'').trim().toUpperCase();if(!q)return '';
+  const all=[];SECTIONS.forEach(s=>s.villas.forEach(v=>all.push({v,s})));
+  const hit=all.filter(x=>String(x.v.label).toUpperCase().includes(q)),exact=hit.filter(x=>String(x.v.label).toUpperCase()===q);
+  const one=exact.length?exact:hit.length===1?hit:[];
+  if(!hit.length)return '<p class="muted fnone">No room matches '+esc(q)+'.</p>';
+  if(!one.length)return '<div class="fpick">'+hit.slice(0,24).map(x=>'<button class="mini" data-act="vfind" data-q="'+esc(x.v.label)+'">'+esc(x.v.label)+'</button>').join('')+(hit.length>24?'<span class="muted">and '+(hit.length-24)+' more, keep typing</span>':'')+'</div>';
+  return one.map(({v,s})=>{
+    const id=v.id,g=S.day.g[id]||{},ra=S.staff.find(p=>p.id===S.day.sec[s.n]),sup=supOf(id),bn=butlerName(id),b=bn?butlerOf(bn):null,items=mvItems(id);
+    const tags=g.rem?remTags(g.rem).map(t=>'<span class="tag" style="--h:'+t.h+'">'+t.l+'</span>').join(''):'';
+    const pax=gTxt(g),guest=pax||g.arrD||g.depD||g.nat||g.rem||g.vip;
+    return '<div class="fcard"><div class="fhead"><b>'+esc(v.label)+'</b>'+chip(S.day.st[id])+'<span class="muted">'+esc(s.title)+'</span><button class="btn sm" data-act="villa" data-v="'+esc(id)+'">Open villa</button></div>'+
+      '<h4>Staff</h4>'+
+      staffLine('Room attendant',ra,ra&&offOn(ra.id,S.date))+
+      staffLine('Supervisor',sup,sup&&offOn(sup.id,S.date))+
+      '<div class="fline"><span class="muted">Butler</span><span>'+(!bn?'<span class="muted">Not on the report</span>':b&&b!=='many'?esc(b.name)+(b.phone?' · <a class="ph" href="tel:'+esc(b.phone)+'">'+esc(b.phone)+'</a>':''):esc(bn))+'</span></div>'+
+      '<h4>Guests</h4>'+(guest?
+      '<div class="fline"><span class="muted">Pax</span><span>'+(pax?esc((g.ad||0)+' adults, '+(g.ch||0)+' children, '+(g.inf||0)+' infants'):'<span class="muted">Not given</span>')+'</span></div>'+
+      '<div class="fline"><span class="muted">Country</span><span>'+(g.nat?esc(natName(g.nat)):'<span class="muted">Not given</span>')+'</span></div>'+
+      '<div class="fline"><span class="muted">Arrival</span><span>'+(g.arrD?esc(g.arrD):'<span class="muted">Not given</span>')+'</span></div>'+
+      '<div class="fline"><span class="muted">Departure</span><span>'+(g.depD?esc(g.depD):'<span class="muted">Not given</span>')+'</span></div>'+
+      (g.vip?'<div class="fline"><span class="muted">VIP</span><span>'+esc(g.vip)+'</span></div>':'')+
+      '<div class="fline"><span class="muted">Occasions</span><span>'+(g.rem?tags+' '+esc(g.rem):'<span class="muted">None noted</span>')+'</span></div>'
+      :'<p class="muted" style="margin:0">No guest details for this room today.</p>')+
+      (items.length?'<h4>Today</h4><div class="mvline">'+items.map(x=>'<div class="mv" style="--h:'+x.h+'">'+x.t+'</div>').join('')+'</div>':'')+'</div>'}).join('');
 }
 /* ---------- butlers ---------- */
 /* a villa has a guest in it today if it is occupied, or the guest is still there before leaving or moving out */
@@ -1401,12 +1450,13 @@ async function applyReport(res){
   const keep=id=>(old[id]&&old[id].rem)||(pg[id]&&pg[id].rem)||'';
   /* the in-house list may have no butler column, so a staying guest keeps the butler they had the day before */
   const keepB=id=>(old[id]&&old[id].butler)||(pg[id]&&pg[id].butler)||'';
-  Object.keys(res.inh).forEach(id=>{const r=res.inh[id];g[id]={ad:r.ad,ch:r.ch,inf:inf(id,r),rem:events(r.rem)||keep(id),vip:r.vip||'',arrD:ymd(r.arrDate),depD:ymd(r.depDate),butler:r.butler||keepB(id)}});
-  Object.keys(D).forEach(id=>{const r=D[id],n=nn(r);g[id]={ad:r.ad,ch:r.ch,inf:inf(id,r),rem:events(r.rem)||keep(id),vip:r.vip||'',arrD:n?fmtShort(addDays(date,-n)):'',depD:fmtShort(date),butler:r.butler||keepB(id)}});
-  Object.keys(A).forEach(id=>{const r=A[id],dp=D[id]?g[id]:null,n=nn(r);g[id]={ad:r.ad,ch:r.ch,inf:r.inf||'',rem:[events(r.rem),dp&&dp.rem?'Departing guest: '+dp.rem:''].filter(Boolean).join(' | '),vip:r.vip||'',arrD:fmtShort(date),depD:n?fmtShort(addDays(date,n)):'',butler:r.butler||''}});
+  const keepN=id=>(old[id]&&old[id].nat)||(pg[id]&&pg[id].nat)||'';
+  Object.keys(res.inh).forEach(id=>{const r=res.inh[id];g[id]={ad:r.ad,ch:r.ch,inf:inf(id,r),rem:events(r.rem)||keep(id),vip:r.vip||'',arrD:ymd(r.arrDate),depD:ymd(r.depDate),butler:r.butler||keepB(id),nat:r.nat||keepN(id)}});
+  Object.keys(D).forEach(id=>{const r=D[id],n=nn(r);g[id]={ad:r.ad,ch:r.ch,inf:inf(id,r),rem:events(r.rem)||keep(id),vip:r.vip||'',arrD:n?fmtShort(addDays(date,-n)):'',depD:fmtShort(date),butler:r.butler||keepB(id),nat:r.nat||keepN(id)}});
+  Object.keys(A).forEach(id=>{const r=A[id],dp=D[id]?g[id]:null,n=nn(r);g[id]={ad:r.ad,ch:r.ch,inf:r.inf||'',rem:[events(r.rem),dp&&dp.rem?'Departing guest: '+dp.rem:''].filter(Boolean).join(' | '),vip:r.vip||'',arrD:fmtShort(date),depD:n?fmtShort(addDays(date,n)):'',butler:r.butler||'',nat:r.nat||''}});
   /* villa moves: the guest's details go with them to the new villa, and the villa they leave is cleared */
   const moved={};
-  M.forEach(m=>{if(m.from&&m.to&&res.inh[m.from]){const r=res.inh[m.from];moved[m.to]={ad:r.ad,ch:r.ch,inf:inf(m.from,r),rem:events(r.rem)||keep(m.from),vip:r.vip||'',arrD:ymd(r.arrDate),depD:ymd(r.depDate),butler:m.butler||r.butler||keepB(m.from)}}});
+  M.forEach(m=>{if(m.from&&m.to&&res.inh[m.from]){const r=res.inh[m.from];moved[m.to]={ad:r.ad,ch:r.ch,inf:inf(m.from,r),rem:events(r.rem)||keep(m.from),vip:r.vip||'',arrD:ymd(r.arrDate),depD:ymd(r.depDate),butler:m.butler||r.butler||keepB(m.from),nat:r.nat||keepN(m.from)}}});
   M.forEach(m=>{if(m.from&&!A[m.from]&&!moved[m.from])delete g[m.from]});
   Object.keys(moved).forEach(id=>{if(A[id])return;const dp=D[id]&&g[id]&&g[id].rem?g[id].rem:'';g[id]=Object.assign({},moved[id],{rem:[moved[id].rem,dp?'Departing guest: '+dp:''].filter(Boolean).join(' | ')})});
   S.day.g=g;
@@ -1501,6 +1551,7 @@ document.addEventListener('click',e=>{
   else if(a==='reset'){if(S.arm==='reset'){S.day.st={};S.arm=null;touch('d-'+S.date)}else S.arm='reset';render()}
   else if(a==='copy')copyText(b.dataset.copy);
   else if(a==='status')openStatus(b.dataset.v);
+  else if(a==='vfind'){S.q=b.dataset.q;const i=$('#vsearch');if(i)i.value=S.q;$('#vsres').innerHTML=findHTML(S.q)}
   else if(a==='tlist'&&/^s(duty|off|lv)$/.test(b.dataset.k)){const k=b.dataset.k,d=S.date;
     lvLoadNear(d.slice(0,7)).then(()=>openInfo((k==='sduty'?'Staff on duty':k==='soff'?'Staff day off':'Staff on leave')+', '+fmtShort(d),k==='sduty'?dutyHTML(d):lvDayHTML(d,k.slice(1))))}
   else if(a==='lv-day'){const d=b.dataset.d;lvLoadNear(S.month).then(()=>openInfo(fmtLong(d),lvDayHTML(d)))}
@@ -1567,6 +1618,7 @@ document.addEventListener('input',e=>{
   if(e.target.id==='staffpaste'){S.pasteText=e.target.value;return}
   if(e.target.id==='newrole'){S.roleText=e.target.value;return}
   const f=e.target.dataset&&e.target.dataset.f;if(!f)return;
+  if(f==='vsearch'){S.q=e.target.value;$('#vsres').innerHTML=findHTML(S.q);return}
   if(f==='occupied'){const n=Math.max(0,parseInt(e.target.value,10)||0);S.day.fc=Object.assign({},S.day.fc,{occupied:n,pct:Math.round(n/SELLABLE.length*100)});S.day.fcAuto=false;touch('d-'+S.date)}
   else if(f==='adult'||f==='child'||f==='infant'||f==='show'||f==='project'){S.day[f]=e.target.value;if(f!=='show'&&f!=='project')S.day.fcAuto=false;if(f==='adult'||f==='child'){const t=$('#totalguests');if(t)t.textContent=(+S.day.adult||0)+(+S.day.child||0)}touch('d-'+S.date)}
   else if(f==='mv'){const k=e.target.dataset.k,v=e.target.dataset.v,pl=ensurePlan(S.pdate),r=k==='mv'?pl.mv[+v]:pl[k][v];if(r){r[e.target.dataset.p]=e.target.value;touch('p-'+S.pdate)}}
