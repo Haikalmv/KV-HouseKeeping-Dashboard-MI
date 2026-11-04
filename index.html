@@ -859,7 +859,7 @@ function secBrief(sec){
 }
 
 /* ---------- guests and remarks ---------- */
-const TAGS=[['Honeymoon',/honey|\bHM\b|babymoon/i,330],['Anniversary',/anniv/i,10],['Birthday',/birth|b'?day/i,45],['VIP',/\bvip\b|svip/i,265],['Wedding',/wedding/i,200]];
+const TAGS=[['Honeymoon',/honey|\bHM\b|babymoon/i,330],['Anniversary',/anniv/i,10],['Birthday',/birth|b'?day/i,45],['VIP',/\bvip\b|svip/i,265],['Wedding',/wedding/i,200],['Repeater',/repeat|\bRPT\b|returning guest/i,160]];
 function remTags(t){
   if(!t)return [];
   const o=TAGS.filter(x=>x[1].test(t)).map(x=>({l:x[0],h:x[2]}));
@@ -917,7 +917,7 @@ function villaHTML(id){
    '<div class="contact" id="vbutlerc">'+butlerContact(g.butler)+'</div>':'')+
    '<h4>Guests in villa</h4><div class="mvt">'+num('ad','Adults')+num('ch','Children')+num('inf','Infants')+'</div>'+
    '<h4>Stay</h4><div class="mvt"><label>Arrival date<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="arrD" value="'+esc(g.arrD||'')+'" placeholder="e.g. 22 Oct"></label><label>Departure date<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="depD" value="'+esc(g.depD||'')+'" placeholder="e.g. 1 Nov"></label><label>VIP level<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="vip" value="'+esc(g.vip||'')+'" placeholder="e.g. V03"></label><label>Country<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="nat" value="'+esc(g.nat||'')+'" placeholder="e.g. GB"></label></div>'+
-   '<h4>Remarks (birthday, anniversary, honeymoon, requests)</h4><textarea id="vrem" rows="3" data-f="grem" data-v="'+esc(id)+'" placeholder="Honeymoon, anniversary, birthday, VIPs or any special request for housekeeping">'+esc(g.rem||'')+'</textarea>'+
+   '<h4>Remarks (birthday, anniversary, honeymoon, repeater, requests)</h4><textarea id="vrem" rows="3" data-f="grem" data-v="'+esc(id)+'" placeholder="Honeymoon, anniversary, birthday, repeater, VIPs or any special request for housekeeping">'+esc(g.rem||'')+'</textarea>'+
    (items.length?'<h4>Arrival, departure and moves</h4><div class="mvline">'+items.map(x=>'<div class="mv" style="--h:'+x.h+'">'+x.t+(x.d?' <i>(draft)</i>':'')+'</div>').join('')+'</div>':'')+
    '<h4>Section</h4><div class="vrow"><select id="vsec" data-f="vsec" data-v="'+esc(id)+'" aria-label="Move villa to another section">'+SECTIONS.map(s=>'<option value="'+s.n+'"'+(sec&&s.n===sec.n?' selected':'')+'>'+s.title+'</option>').join('')+'</select>'+(LAYOUT[id]?'<button class="btn sm" data-act="vorig" data-v="'+esc(id)+'">Back to original</button>':'')+'</div>'+duDel+'</div>';
 }
@@ -1456,7 +1456,7 @@ async function pdfPages(file){
 const AIPROMPT='You are reading a resort front-office report (Occupancy Forecast, arrivals, departures, villa moves, in-house guests) from the attached image(s). Villa numbers are 4-digit strings. Dates are ISO YYYY-MM-DD. Return ONLY one JSON object, with these keys and nothing you cannot see (never guess, omit what is not visible): '+
  '{"date":"day the report is for","forecast":{"YYYY-MM-DD":{"pct":occupancy percent number,"occupied":rooms occupied,"arr":arrivals,"dep":departures,"vm":room moves,"adult":adults in house,"child":children in house,"infant":infants,"ooo":out of order rooms,"oos":out of service rooms}},'+
  '"show":"show villas as text","ooo":["villa numbers out of order"],"oos":["villa numbers out of service"],'+
- '"inh":{"villa":{"ad":n,"ch":n,"inf":n,"nat":"NAT. column code","rem":"remarks"}},"arr":{"YYYY-MM-DD":{"villa":{"ad":n,"ch":n,"inf":n,"nat":"NAT. column code","eta":"HH:MM","ready":"HH:MM","rem":"special requests, honeymoon, anniversary, birthday, VIP"}}},'+
+ '"inh":{"villa":{"ad":n,"ch":n,"inf":n,"nat":"NAT. column code","rem":"remarks"}},"arr":{"YYYY-MM-DD":{"villa":{"ad":n,"ch":n,"inf":n,"nat":"NAT. column code","eta":"HH:MM","ready":"HH:MM","rem":"special requests, honeymoon, anniversary, birthday, repeater, VIP"}}},'+
  '"dep":{"YYYY-MM-DD":{"villa":{"ad":n,"ch":n,"nat":"NAT. column code","co":"HH:MM","out":"HH:MM","rem":"remarks"}}},"mv":{"YYYY-MM-DD":[{"from":"villa","to":"villa","co":"HH:MM","ci":"HH:MM","butler":"name"}]}}';
 async function readWithClaude(blobs,prompt){
   let sample=null;
@@ -1554,7 +1554,7 @@ async function applyReport(res){
     else if(c==='VAC'&&prevSt[id]==='VC')c='VC';
     if(c)st[id]=c;
   }));
-  const EV=[['Honeymoon',/honeymoon|\bHM\b/i],['Anniversary',/anniv/i],['Birthday',/birth|b'?day/i]];
+  const EV=[['Honeymoon',/honeymoon|\bHM\b/i],['Anniversary',/anniv/i],['Birthday',/birth|b'?day/i],['Repeater',/repeat|\bRPT\b|returning guest/i]];
   const events=t=>EV.filter(x=>x[1].test(t||'')).map(x=>x[0]).join(', ');
   const ymd=t=>String(t||'').replace('-',' '),nn=r=>parseInt(r.nights,10)||0;
   const inf=(id,r)=>r.inf?r.inf:((old[id]&&old[id].inf)||'');
