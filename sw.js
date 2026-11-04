@@ -1,6 +1,6 @@
 /* Villa board offline support. Change the version when you upload new files. */
-const VERSION='villa-board-v6';
-const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
+const VERSION='villa-board-v21';
+const LOCAL=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png'];
 const PDF='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
 const EXTRA=[PDF+'pdf.min.js',PDF+'pdf.worker.min.js'];
 

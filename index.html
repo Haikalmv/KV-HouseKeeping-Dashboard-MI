@@ -9,7 +9,8 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#EDF3F3">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -338,6 +339,7 @@ table.lv{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%
 </div>
 <div class="toast" id="toast" hidden></div>
 <input type="file" id="kvmfile" accept="application/pdf,.pdf,image/*" hidden aria-label="Choose the report: PDF, photo or screenshot">
+<input type="file" id="stafffile" accept=".pdf,application/pdf,image/*,.xlsx,.docx,.csv,.txt,text/plain,text/csv" hidden aria-label="Choose a staff list: PDF, Excel, Word, CSV, text, photo or screenshot">
 
 <script>
 /* KVM Flow report reader. Reads the daily front-office PDF with pdf.js and returns structured data. */
@@ -348,7 +350,7 @@ var MON3={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,de
 var P2=function(n){return (n<10?'0':'')+n};
 var DATE_LONG=/^\w+day (\d{1,2}) (\w+) (\d{4})$/;
 function isoLong(s){var m=DATE_LONG.exec(s);if(!m)return null;var mo=MON[m[2].toLowerCase()];return mo?m[3]+'-'+P2(mo)+'-'+P2(+m[1]):null}
-var HEAD={'Villa':'villa','Adult':'ad','Child':'ch','NAT.':'nat','VIP':'vip','Nights':'nights','Butler':'butler','C/O':'co','Dep. FLT':'flt','Arr. FLT':'flt','FLT. Time':'fltTime','Dep.Time':'out','ETA to KVM':'eta','Villa Status':'ready','MP':'mp','Boat':'boat','Arr. Date':'arrDate','Dep. Date':'depDate','Guest Name':'name','Remarks':'remarks','From':'from','To':'to','C/I':'ci'};
+var HEAD={'Villa':'villa','Adult':'ad','Child':'ch','NAT.':'nat','NAT':'nat','Nat.':'nat','Nationality':'nat','VIP':'vip','Nights':'nights','Butler':'butler','C/O':'co','Dep. FLT':'flt','Arr. FLT':'flt','FLT. Time':'fltTime','Dep.Time':'out','ETA to KVM':'eta','Villa Status':'ready','MP':'mp','Boat':'boat','Arr. Date':'arrDate','Dep. Date':'depDate','Guest Name':'name','Remarks':'remarks','From':'from','To':'to','C/I':'ci'};
 
 async function loadPages(lib,buf,scale){
   var doc=await lib.getDocument({data:new Uint8Array(buf)}).promise,out=[];
@@ -893,7 +895,8 @@ function butlerOf(name){
   const U=s=>String(s||'').trim().toUpperCase().replace(/\s+/g,' '),n=U(name);if(!n)return null;
   const L=S.staff.filter(p=>p.name),isB=isButler;
   const pick=f=>{let m=L.filter(f);if(m.some(isB))m=m.filter(isB);return m.length===1?m[0]:m.length?'many':null};
-  return pick(p=>U(p.name)===n)||pick(p=>U(p.name).split(' ').includes(n));
+  /* a name can carry the short name in brackets, e.g. HSU PYAE MON KYAW (Emory), and the report may use either */
+  return pick(p=>U(p.name)===n)||pick(p=>U(p.name).split(/[\s()]+/).includes(n))||pick(p=>U(p.name).replace(/\s*\(.*\)\s*/g,' ').trim()===n);
 }
 function butlerContact(name){
   if(!String(name||'').trim())return '<span class="muted">No butler on the report. Type a name to look up the number.</span>';
@@ -943,7 +946,7 @@ function findHTML(q){
       '<div class="fline"><span class="muted">Butler</span><span>'+(!bn?'<span class="muted">Not on the report</span>':b&&b!=='many'?esc(b.name)+(b.phone?' · <a class="ph" href="tel:'+esc(b.phone)+'">'+esc(b.phone)+'</a>':''):esc(bn))+'</span></div>'+
       '<h4>Guests</h4>'+(guest?
       '<div class="fline"><span class="muted">Pax</span><span>'+(pax?esc((g.ad||0)+' adults, '+(g.ch||0)+' children, '+(g.inf||0)+' infants'):'<span class="muted">Not given</span>')+'</span></div>'+
-      '<div class="fline"><span class="muted">Country</span><span>'+(g.nat?esc(natName(g.nat)):'<span class="muted">Not given</span>')+'</span></div>'+
+      '<div class="fline"><span class="muted">Country</span><span>'+(g.nat?esc(natName(g.nat))+(natName(g.nat)!==g.nat.trim()?' <span class="muted">('+esc(g.nat.trim())+')</span>':''):'<span class="muted">Not saved yet. Import today\'s report again to fill it in.</span>')+'</span></div>'+
       '<div class="fline"><span class="muted">Arrival</span><span>'+(g.arrD?esc(g.arrD):'<span class="muted">Not given</span>')+'</span></div>'+
       '<div class="fline"><span class="muted">Departure</span><span>'+(g.depD?esc(g.depD):'<span class="muted">Not given</span>')+'</span></div>'+
       (g.vip?'<div class="fline"><span class="muted">VIP</span><span>'+esc(g.vip)+'</span></div>':'')+
@@ -1213,7 +1216,9 @@ function staffHTML(){
       (L.map(row).join('')||'<p class="muted" style="margin:0;font-size:13px">Nobody yet.</p>')+'</div>'}).join('')+'</div>'+
   '<div class="panel lvform" style="max-width:720px"><h2>Add a role</h2><p class="muted" style="margin:0">Make a role for any other team, such as Butler or Laundry. Supervisor and Room attendant always stay. Removing a role moves its people to Room attendants.</p>'+
   '<div class="rolef"><input type="text" id="newrole" value="'+esc(S.roleText||'')+'" placeholder="Role name, for example Butler" aria-label="New role name"><button class="btn pri" data-act="role-add">Add role</button></div></div>'+
-  '<div class="panel lvform" style="max-width:720px"><h2>Paste a staff list</h2><p class="muted" style="margin:0">One person per line, name then number, for example: Ahmed Ali, 7001234. Everyone in the list is added with the rank you choose. Names already in the list are skipped.</p>'+
+  '<div class="panel lvform" style="max-width:720px"><h2>Add a staff list</h2><p class="muted" style="margin:0">Upload a list, or type one person per line, name then number, for example: Ahmed Ali, 7001234. Everyone in the list is added with the rank you choose. Names already in the list are skipped.</p>'+
+  '<div class="hbtns"><button class="btn" data-act="staff-file">Upload a list</button><span class="muted" style="font-size:13px">PDF, Excel, Word, CSV or text. Photos and screenshots work when the board is opened inside Claude.</span></div>'+
+  (S.pasteMsg?'<div class="note"><span>'+esc(S.pasteMsg)+'</span></div>':'')+
   '<label class="pr">Add them as<select id="pasterank" aria-label="Rank for the pasted people">'+RANKS.map(r=>'<option value="'+esc(r[0])+'"'+(pasteRank()===r[0]?' selected':'')+'>'+esc(r[2])+'</option>').join('')+'</select></label>'+
   '<textarea id="staffpaste" rows="4" placeholder="Name, number">'+esc(S.pasteText||'')+'</textarea><div class="hbtns"><button class="btn pri" data-act="staff-paste">Add these people</button></div></div>'+
   '<div class="panel lvform" style="max-width:720px"><h2>Backup and restore</h2><p class="muted" style="margin:0">Everything is saved on this device only. Download a backup now and then, and use it to move the board to another phone or computer.</p>'+
@@ -1275,7 +1280,7 @@ async function restoreBackup(file){
 }
 function pasteStaff(){
   const box=$('#staffpaste');if(!box)return;
-  const role=pasteRank();S.pasteText='';
+  const role=pasteRank();S.pasteText='';S.pasteMsg='';
   const have=new Set(S.staff.map(p=>String(p.name).trim().toUpperCase()));let n=0;
   box.value.split(/\n+/).forEach(line=>{
     /* the number can sit anywhere after the name; notes after it, like (no duty number), are left out */
@@ -1287,6 +1292,108 @@ function pasteStaff(){
   if(n){S.staffSaved=true;touch('staff');render()}
   if(n)box.value='';
   toast(n?'Added '+n+(n===1?' person':' people')+' as '+rankName(role).toLowerCase():'Nobody new to add');
+}
+/* ---------- staff list from a file ----------
+   every kind of file becomes rows of cells; each row is read as a name and a number and put in the paste box to check before adding */
+const PHONE_RE=/\+?\d[\d -]{5,}\d/;
+function rowToStaff(cells){
+  let phone='';const names=[];
+  cells.forEach(c=>{
+    c=String(c||'').replace(/\s+/g,' ').trim();if(!c)return;
+    const m=PHONE_RE.exec(c);if(m&&!phone){phone=m[0].replace(/[\s-]/g,'');c=c.replace(m[0],' ')}
+    c=c.replace(/no duty (number|no\.?)/ig,' ').replace(/\s+/g,' ').replace(/^[\s,;:-]+|[\s,;:-]+$/g,'');
+    if(/[A-Za-z]/.test(c))names.push(c);
+  });
+  const name=names.join(' ').replace(/\s+/g,' ').trim();
+  return name?{name,phone}:null;
+}
+/* headings and title rows usually have no number, so when the list has numbers, rows without one are left out */
+function rowsToLines(rows){
+  const all=rows.map(rowToStaff).filter(p=>p&&!/^(s\.?\s?no\.?|sr\.?|no\.|name|names|contact|phone|number|staff)$/i.test(p.name));
+  const withNo=all.filter(p=>p.phone),use=withNo.length?withNo:all;
+  return {lines:use.map(p=>p.name+(p.phone?', '+p.phone:'')),left:all.length-use.length};
+}
+/* the parts of a zip file (xlsx and docx are zips), unpacked with the browser's own decompression */
+async function unzip(buf){
+  const v=new DataView(buf),out={};let e=buf.byteLength-22;
+  while(e>=0&&v.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error('Not a zip file');
+  let p=v.getUint32(e+16,true);const n=v.getUint16(e+10,true),dec=new TextDecoder();
+  for(let i=0;i<n;i++){
+    const meth=v.getUint16(p+10,true),size=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),xl=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),off=v.getUint32(p+42,true);
+    const name=dec.decode(new Uint8Array(buf,p+46,nl));
+    out[name]=async()=>{const s=off+30+v.getUint16(off+26,true)+v.getUint16(off+28,true),raw=new Blob([new Uint8Array(buf,s,size)]);
+      return meth===0?raw.text():new Response(raw.stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()};
+    p+=46+nl+xl+cl;
+  }
+  return out;
+}
+const xmlOf=t=>new DOMParser().parseFromString(t,'application/xml');
+const xmlText=(el,tag)=>Array.from(el.getElementsByTagName(tag)).map(x=>x.textContent).join('');
+async function xlsxRows(buf){
+  const z=await unzip(buf),ss=z['xl/sharedStrings.xml']?Array.from(xmlOf(await z['xl/sharedStrings.xml']()).getElementsByTagName('si')).map(si=>xmlText(si,'t')):[];
+  const sheet=Object.keys(z).filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort()[0];if(!sheet)return [];
+  return Array.from(xmlOf(await z[sheet]()).getElementsByTagName('row')).map(r=>Array.from(r.getElementsByTagName('c')).map(c=>{
+    const t=c.getAttribute('t'),val=xmlText(c,'v');return t==='s'?ss[+val]||'':t==='inlineStr'?xmlText(c,'t'):val}));
+}
+async function docxRows(buf){
+  const z=await unzip(buf);if(!z['word/document.xml'])return [];
+  const doc=xmlOf(await z['word/document.xml']()),para=el=>Array.from(el.getElementsByTagName('w:p')).map(p=>xmlText(p,'w:t')).join(' ');
+  const rows=Array.from(doc.getElementsByTagName('w:tr')).map(tr=>Array.from(tr.getElementsByTagName('w:tc')).map(para));
+  return rows.length?rows:Array.from(doc.getElementsByTagName('w:p')).map(p=>[xmlText(p,'w:t')]);
+}
+const textRows=t=>t.split(/\r?\n/).map(l=>l.split(/\t|;|,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c=>c.replace(/^"|"$/g,'')));
+/* a PDF has no rows, only text at positions: a name and the (nickname) under it make one person,
+   and the number nearest to that person, level with it or beside it, is theirs */
+async function pdfRows(buf){
+  const lib=await loadPdfLib();if(!lib)throw new Error('The PDF reader could not load. Connect to the internet once, then try again.');
+  try{if(!lib.GlobalWorkerOptions.workerSrc)lib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js'}catch(e){}
+  const doc=await lib.getDocument({data:new Uint8Array(buf)}).promise,items=[];let off=0;
+  for(let n=1;n<=doc.numPages;n++){
+    const pg=await doc.getPage(n),vp=pg.getViewport({scale:1}),tc=await pg.getTextContent();
+    tc.items.forEach(it=>{const s=(it.str||'').trim();if(s)items.push({x:it.transform[4],w:it.width||0,y:off+vp.height-it.transform[5],s})});
+    off+=vp.height+100;
+  }
+  items.sort((a,b)=>a.y-b.y||a.x-b.x);
+  /* join the words of one line that sit close together */
+  const chunks=[];
+  items.forEach(it=>{const c=chunks.find(c=>Math.abs(c.y-it.y)<2.5&&it.x-(c.x2)<12&&it.x>=c.x-1);if(c){c.s+=' '+it.s;c.x2=it.x+it.w}else chunks.push({x:it.x,x2:it.x+it.w,y:it.y,s:it.s})});
+  const blocks=[],phones=[];
+  chunks.forEach(c=>{
+    const cx=(c.x+c.x2)/2,m=PHONE_RE.exec(c.s);
+    let s=c.s;if(m){phones.push({y:c.y,x:c.x,n:m[0].replace(/[\s-]/g,'')});s=s.replace(m[0],' ')}
+    s=s.replace(/no duty (number|no\.?)/ig,' ').replace(/\s+/g,' ').trim();if(!/[A-Za-z]/.test(s))return;
+    const b=/^\(.*\)$/.test(s)&&blocks.slice().reverse().find(b=>c.y-b.y2>0&&c.y-b.y2<25&&Math.abs(b.cx-cx)<100);
+    if(b){b.name+=' '+s;b.y2=c.y}else blocks.push({name:s,y:c.y,y2:c.y,x:c.x,cx,phone:''});
+  });
+  phones.forEach(ph=>{
+    let best=null,bd=1e9;
+    blocks.forEach(b=>{if(b.phone||b.x>ph.x+1)return;const d=Math.abs((b.y+b.y2)/2-ph.y);if(d<bd||(d===bd&&best&&b.x<best.x)){bd=d;best=b}});
+    if(best&&bd<30)best.phone=ph.n;
+  });
+  return blocks.map(b=>[b.name,b.phone]);
+}
+const STAFFPROMPT='This image is a staff list. Return ONLY JSON: {"people":[{"name":"full name as written, with any short name in brackets after it, e.g. AHMED ALI (Ali)","phone":"contact number, digits only"}]}. One entry per person, in the order shown. Leave out headings and notes such as No Duty Number. Never guess a name or number you cannot read.';
+async function staffFromFile(file){
+  const nm=file.name.toLowerCase(),ty=file.type||'';
+  toast('Reading the list…');
+  try{
+    let rows;
+    if(ty==='application/pdf'||nm.endsWith('.pdf'))rows=await pdfRows(await file.arrayBuffer());
+    else if(nm.endsWith('.xlsx'))rows=await xlsxRows(await file.arrayBuffer());
+    else if(nm.endsWith('.docx'))rows=await docxRows(await file.arrayBuffer());
+    else if(ty.startsWith('image/')){
+      const a=await readWithClaude([await shrink(file)],STAFFPROMPT);if(a.err){toast(a.err.replace('Import the PDF instead','Upload the list as a PDF, Excel or Word file instead'));return}
+      rows=((a.json&&a.json.people)||[]).map(p=>[p&&p.name,p&&p.phone]);
+    }else if(/\.(csv|txt)$/.test(nm)||ty.startsWith('text/'))rows=textRows(await file.text());
+    else{toast('This kind of file cannot be read. Use PDF, Excel, Word, CSV, text or a photo.');return}
+    const r=rowsToLines(rows);
+    if(!r.lines.length){toast('No names found in this file');return}
+    const box=$('#staffpaste'),cur=((box&&box.value)||S.pasteText||'').trim();
+    S.pasteText=(cur?cur+'\n':'')+r.lines.join('\n');
+    S.pasteMsg='Found '+r.lines.length+(r.lines.length===1?' person':' people')+' in '+file.name+(r.left?'. Left out '+r.left+(r.left===1?' line':' lines')+' with no number, such as headings':'')+'. Check the names below, delete any line that is not a person, pick the rank, then tap Add these people.';
+    render();
+    const b=$('#staffpaste');if(b){b.rows=Math.min(14,Math.max(4,S.pasteText.split('\n').length));b.focus()}
+  }catch(e){toast('Could not read this file. '+((e&&e.message)||''))}
 }
 function tomorrowBar(){
   const t=addDays(S.date,1),p=planOf(t),nd=Object.keys(p.dep).length,na=Object.keys(p.arr).length,nm=p.mv.length,any=nd||na||nm;
@@ -1349,24 +1456,24 @@ async function pdfPages(file){
 const AIPROMPT='You are reading a resort front-office report (Occupancy Forecast, arrivals, departures, villa moves, in-house guests) from the attached image(s). Villa numbers are 4-digit strings. Dates are ISO YYYY-MM-DD. Return ONLY one JSON object, with these keys and nothing you cannot see (never guess, omit what is not visible): '+
  '{"date":"day the report is for","forecast":{"YYYY-MM-DD":{"pct":occupancy percent number,"occupied":rooms occupied,"arr":arrivals,"dep":departures,"vm":room moves,"adult":adults in house,"child":children in house,"infant":infants,"ooo":out of order rooms,"oos":out of service rooms}},'+
  '"show":"show villas as text","ooo":["villa numbers out of order"],"oos":["villa numbers out of service"],'+
- '"inh":{"villa":{"ad":n,"ch":n,"inf":n,"rem":"remarks"}},"arr":{"YYYY-MM-DD":{"villa":{"ad":n,"ch":n,"inf":n,"eta":"HH:MM","ready":"HH:MM","rem":"special requests, honeymoon, anniversary, birthday, VIP"}}},'+
- '"dep":{"YYYY-MM-DD":{"villa":{"ad":n,"ch":n,"co":"HH:MM","out":"HH:MM","rem":"remarks"}}},"mv":{"YYYY-MM-DD":[{"from":"villa","to":"villa","co":"HH:MM","ci":"HH:MM","butler":"name"}]}}';
-async function readWithClaude(blobs){
+ '"inh":{"villa":{"ad":n,"ch":n,"inf":n,"nat":"NAT. column code","rem":"remarks"}},"arr":{"YYYY-MM-DD":{"villa":{"ad":n,"ch":n,"inf":n,"nat":"NAT. column code","eta":"HH:MM","ready":"HH:MM","rem":"special requests, honeymoon, anniversary, birthday, VIP"}}},'+
+ '"dep":{"YYYY-MM-DD":{"villa":{"ad":n,"ch":n,"nat":"NAT. column code","co":"HH:MM","out":"HH:MM","rem":"remarks"}}},"mv":{"YYYY-MM-DD":[{"from":"villa","to":"villa","co":"HH:MM","ci":"HH:MM","butler":"name"}]}}';
+async function readWithClaude(blobs,prompt){
   let sample=null;
   try{sample=window.claude&&window.claude.use?await window.claude.use('sample'):null}catch(e){}
   if(!sample)return {err:'Photos and screenshots can only be read when the board is opened inside Claude. Import the PDF instead.'};
   try{
     let lim={};try{lim=await sample.limits()}catch(e){}
     if(lim&&lim.images===false)return {err:'Reading images is not available for this page.'};
-    return {json:await sample.json(AIPROMPT,{images:blobs,modelTier:'default'})};
+    return {json:await sample.json(prompt||AIPROMPT,{images:blobs,modelTier:'default'})};
   }catch(e){return {err:'Claude could not read the picture. '+((e&&e.message)||'')}}
 }
 function normAI(j,fallbackDate){
   const o=x=>(x&&typeof x==='object'&&!Array.isArray(x))?x:{},str=a=>(Array.isArray(a)?a:[]).map(String);
   const r={date:/^\d{4}-\d{2}-\d{2}$/.test(j&&j.date)?j.date:fallbackDate,forecast:{},arr:{},dep:{},mv:{},inh:{},show:j&&j.show?String(j.show):'',ooo:str(j&&j.ooo),oos:str(j&&j.oos),source:'photo'};
   Object.keys(o(j.forecast)).forEach(d=>{const f=o(j.forecast[d]);r.forecast[d]={pct:f.pct,occupied:f.occupied,arr:f.arr,dep:f.dep,vm:f.vm,adult:f.adult,child:f.child,infant:f.infant,ooo:f.ooo,oos:f.oos}});
-  Object.keys(o(j.inh)).forEach(v=>{const x=o(j.inh[v]);r.inh[v]={ad:+x.ad||0,ch:+x.ch||0,inf:+x.inf||0,rem:x.rem||''}});
-  ['arr','dep'].forEach(k=>Object.keys(o(j[k])).forEach(d=>{r[k][d]={};Object.keys(o(j[k][d])).forEach(v=>{const x=o(j[k][d][v]);r[k][d][v]={ad:+x.ad||0,ch:+x.ch||0,inf:+x.inf||0,eta:x.eta||'',ready:x.ready||'',co:x.co||'',out:x.out||'',rem:x.rem||''}})}));
+  Object.keys(o(j.inh)).forEach(v=>{const x=o(j.inh[v]);r.inh[v]={ad:+x.ad||0,ch:+x.ch||0,inf:+x.inf||0,nat:x.nat?String(x.nat):'',rem:x.rem||''}});
+  ['arr','dep'].forEach(k=>Object.keys(o(j[k])).forEach(d=>{r[k][d]={};Object.keys(o(j[k][d])).forEach(v=>{const x=o(j[k][d][v]);r[k][d][v]={ad:+x.ad||0,ch:+x.ch||0,inf:+x.inf||0,nat:x.nat?String(x.nat):'',eta:x.eta||'',ready:x.ready||'',co:x.co||'',out:x.out||'',rem:x.rem||''}})}));
   Object.keys(o(j.mv)).forEach(d=>{r.mv[d]=(Array.isArray(j.mv[d])?j.mv[d]:[]).map(m=>({from:String(m.from||''),to:String(m.to||''),co:m.co||'',ci:m.ci||'',butler:m.butler||'',pax:''}))});
   return r;
 }
@@ -1546,6 +1653,7 @@ document.addEventListener('click',e=>{
   else if(a==='mv-copy')copyText(mvSummary());
   else if(a==='mv-addmove'){ensurePlan(S.pdate).mv.push({from:'',to:'',co:'',ci:'',butler:'',pax:''});touch('p-'+S.pdate);render()}
   else if(a==='kvm-pick'){const i=$('#kvmfile');if(i)i.click()}
+  else if(a==='staff-file'){const i=$('#stafffile');if(i)i.click()}
   else if(a==='kvm-apply'){closePicker();if(S.pending){const r=S.pending;S.pending=null;applyReport(r).catch(function(){toast('Could not apply the report.')})}}
   else if(a==='sec-copy')copyText(secBrief(secOfN(b.dataset.sec)));
   else if(a==='prev')setDate(addDays(S.date,-1));
@@ -1642,6 +1750,7 @@ document.addEventListener('change',e=>{
   if(t.id==='pdatepick'){if(t.value){S.pdate=t.value;loadPlan(S.pdate).then(render);render()}return}
   if(t.id==='bkfile'){const fl=t.files&&t.files[0];t.value='';if(fl)restoreBackup(fl);return}
   if(t.id==='kvmfile'){const fl=t.files&&t.files[0];t.value='';if(fl)importFile(fl);return}
+  if(t.id==='stafffile'){const fl=t.files&&t.files[0];t.value='';if(fl)staffFromFile(fl);return}
   if(t.id==='pasterank'){S.pasteRank=t.value;const b=$('#staffpaste');if(b)S.pasteText=b.value;return}
   if(f==='srank'&&!S.day){const p=S.staff.find(x=>x.id===t.dataset.id);if(p){p.role=t.value;touch('staff');render()}return}
   if(!f||!S.day)return;
