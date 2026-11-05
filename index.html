@@ -282,7 +282,9 @@ table.lv{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%
 .supvl{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .sv{display:inline-flex;align-items:stretch;border:1px solid var(--line);background:var(--bg);border-radius:7px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
 .sv:hover{border-color:var(--accent)}
-.sv .svb{display:inline-flex;align-items:center;gap:5px;border:0;background:none;padding:3px 7px 3px 0;font-weight:inherit}
+.sv .svb{display:grid;align-content:center;justify-items:start;gap:2px;border:0;background:none;padding:4px 8px 4px 0;font-weight:inherit;text-align:left}
+.sv .svt{display:flex;align-items:center;gap:5px}
+.sv .pax{font-size:11px;font-weight:700;color:var(--fg);border:1px solid var(--line);border-radius:5px;padding:0 5px;background:var(--surface)}
 .sv .tick{display:grid;place-items:center;width:34px;min-height:34px;border:0;background:none;padding:0;color:var(--muted)}
 .sv .tick i{display:grid;place-items:center;width:18px;height:18px;border:1.5px solid currentColor;border-radius:5px}
 .sv .tick svg{opacity:0}
@@ -1052,13 +1054,21 @@ function nextArrival(ids){
   ids.forEach(v=>{const a=p.arr[v],t=a&&mins(a.eta);if(t==null||t<now||chk[v])return;if(!best||t<best.t)best={v,t,eta:a.eta}});
   return best;
 }
-/* every time planned for a villa on this day: check-out, move check-out and check-in, arrival ETA */
+/* every time planned for a villa on this day: check-out (or the time the guest leaves when there is no check-out time),
+   move check-out and check-in, the time the villa must be ready, and the arrival ETA */
 function svTimes(id,p){
   const t=[],r=p.dep[id],a=p.arr[id];
-  if(r&&r.co)t.push('C/O '+r.co);
+  if(r&&r.co)t.push('C/O '+r.co);else if(r&&r.out)t.push('Leaves '+r.out);
   p.mv.forEach(m=>{if(m.from===id&&m.co)t.push('C/O '+m.co);if(m.to===id&&m.ci)t.push('C/I '+m.ci)});
+  if(a&&a.ready)t.push('Ready '+a.ready);
   if(a&&a.eta)t.push('ETA '+a.eta);
   return t.filter((x,i)=>t.indexOf(x)===i).join(' · ');
+}
+/* the guests in the villa today, short: 2A 1C 1I. an arriving party counts over the one leaving */
+function svPax(id,p){
+  const a=p.arr[id],g=S.day.g[id],src=a&&(+a.ad||+a.ch)?a:g;if(!src)return '';
+  const ad=+src.ad||0,ch=+src.ch||0,inf=+src.inf||0;if(!ad&&!ch&&!inf)return '';
+  return [ad+'A',ch?ch+'C':'',inf?inf+'I':''].filter(Boolean).join(' ');
 }
 const ICON_TICK='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 function supHTML(){
@@ -1073,9 +1083,9 @@ function supHTML(){
       oc=ids.filter(v=>OCCUPIED.includes(d.st[v])).length,off=offOn(x.id,S.date),t=[];
     if(ar)t.push(ar+(ar===1?' arrival':' arrivals'));if(dp)t.push(dp+(dp===1?' departure':' departures'));if(mv)t.push(mv+(mv===1?' move':' moves'));
     const nx=nextArrival(ids),chk=d.chk||{},done=ids.filter(v=>chk[v]).length;
-    const rooms=vs.map(v=>{const hot=nx&&nx.v===v.id,on=!!chk[v.id],tm=svTimes(v.id,p);
+    const rooms=vs.map(v=>{const hot=nx&&nx.v===v.id,on=!!chk[v.id],tm=svTimes(v.id,p),px=svPax(v.id,p);
       return '<div class="sv'+(hot?' hot':'')+(on?' done':'')+'"><button class="tick" data-act="sv-chk" data-v="'+esc(v.id)+'" aria-pressed="'+on+'" aria-label="'+esc(v.label)+' checked"><i>'+ICON_TICK+'</i></button>'+
-        '<button class="svb" data-act="status" data-v="'+esc(v.id)+'" aria-label="Status for '+esc(v.label)+(hot?', next arrival':'')+'"><span class="no">'+esc(v.label)+'</span>'+chip(d.st[v.id])+(tm?'<span class="eta">'+esc(tm)+'</span>':'')+'</button></div>'}).join('');
+        '<button class="svb" data-act="status" data-v="'+esc(v.id)+'" aria-label="Status for '+esc(v.label)+(hot?', next arrival':'')+'"><span class="svt"><span class="no">'+esc(v.label)+'</span>'+chip(d.st[v.id])+(px?'<span class="pax">'+esc(px)+'</span>':'')+'</span>'+(tm?'<span class="eta">'+esc(tm)+'</span>':'')+'</button></div>'}).join('');
     return '<div class="supc" style="--h:'+supHue(x.id)+'"><div class="nm"><span>'+esc(x.name||'Unnamed')+'</span><b>'+vs.length+'</b></div>'+
       '<div class="ln">'+(vs.length?(vs.length===1?'villa, ':'villas, ')+oc+' occupied':'No villas yet')+'</div>'+
       (t.length?'<div class="ln">Today: '+t.join(', ')+'</div>':'')+
