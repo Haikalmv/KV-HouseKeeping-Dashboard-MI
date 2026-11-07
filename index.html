@@ -283,7 +283,8 @@ table.lv{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%
 .sv{display:inline-flex;align-items:stretch;border:1px solid var(--line);background:var(--bg);border-radius:7px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
 .sv:hover{border-color:var(--accent)}
 .sv .svb{display:grid;align-content:center;justify-items:start;gap:2px;border:0;background:none;padding:4px 8px 4px 0;font-weight:inherit;text-align:left}
-.sv .svt{display:flex;align-items:center;gap:5px}
+.sv .svt{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.sv .tag{padding:0 7px;font-size:10px;line-height:16px}
 .sv .pax{font-size:11px;font-weight:700;color:var(--fg);border:1px solid var(--line);border-radius:5px;padding:0 5px;background:var(--surface)}
 .sv .tick{display:grid;place-items:center;width:34px;min-height:34px;border:0;background:none;padding:0;color:var(--muted)}
 .sv .tick i{display:grid;place-items:center;width:18px;height:18px;border:1.5px solid currentColor;border-radius:5px}
@@ -1083,9 +1084,11 @@ function supHTML(){
       oc=ids.filter(v=>OCCUPIED.includes(d.st[v])).length,off=offOn(x.id,S.date),t=[];
     if(ar)t.push(ar+(ar===1?' arrival':' arrivals'));if(dp)t.push(dp+(dp===1?' departure':' departures'));if(mv)t.push(mv+(mv===1?' move':' moves'));
     const nx=nextArrival(ids),chk=d.chk||{},done=ids.filter(v=>chk[v]).length;
-    const rooms=vs.map(v=>{const hot=nx&&nx.v===v.id,on=!!chk[v.id],tm=svTimes(v.id,p),px=svPax(v.id,p);
+    const rooms=vs.map(v=>{const hot=nx&&nx.v===v.id,on=!!chk[v.id],tm=svTimes(v.id,p),px=svPax(v.id,p),gr=S.day.g[v.id];
+      /* occasions only; a remark with no occasion in it stays in the villa details */
+      const oc=gr&&gr.rem?remTags(gr.rem).filter(t=>t.l!=='Note').map(t=>'<span class="tag" style="--h:'+t.h+'">'+t.l+'</span>').join(''):'';
       return '<div class="sv'+(hot?' hot':'')+(on?' done':'')+'"><button class="tick" data-act="sv-chk" data-v="'+esc(v.id)+'" aria-pressed="'+on+'" aria-label="'+esc(v.label)+' checked"><i>'+ICON_TICK+'</i></button>'+
-        '<button class="svb" data-act="status" data-v="'+esc(v.id)+'" aria-label="Status for '+esc(v.label)+(hot?', next arrival':'')+'"><span class="svt"><span class="no">'+esc(v.label)+'</span>'+chip(d.st[v.id])+(px?'<span class="pax">'+esc(px)+'</span>':'')+'</span>'+(tm?'<span class="eta">'+esc(tm)+'</span>':'')+'</button></div>'}).join('');
+        '<button class="svb" data-act="status" data-v="'+esc(v.id)+'" aria-label="Status for '+esc(v.label)+(hot?', next arrival':'')+'"><span class="svt"><span class="no">'+esc(v.label)+'</span>'+oc+chip(d.st[v.id])+(px?'<span class="pax">'+esc(px)+'</span>':'')+'</span>'+(tm?'<span class="eta">'+esc(tm)+'</span>':'')+'</button></div>'}).join('');
     return '<div class="supc" style="--h:'+supHue(x.id)+'"><div class="nm"><span>'+esc(x.name||'Unnamed')+'</span><b>'+vs.length+'</b></div>'+
       '<div class="ln">'+(vs.length?(vs.length===1?'villa, ':'villas, ')+oc+' occupied':'No villas yet')+'</div>'+
       (t.length?'<div class="ln">Today: '+t.join(', ')+'</div>':'')+
