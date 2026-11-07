@@ -1085,8 +1085,10 @@ function supHTML(){
     if(ar)t.push(ar+(ar===1?' arrival':' arrivals'));if(dp)t.push(dp+(dp===1?' departure':' departures'));if(mv)t.push(mv+(mv===1?' move':' moves'));
     const nx=nextArrival(ids),chk=d.chk||{},done=ids.filter(v=>chk[v]).length;
     const rooms=vs.map(v=>{const hot=nx&&nx.v===v.id,on=!!chk[v.id],tm=svTimes(v.id,p),px=svPax(v.id,p),gr=S.day.g[v.id];
-      /* occasions only; a remark with no occasion in it stays in the villa details */
-      const oc=gr&&gr.rem?remTags(gr.rem).filter(t=>t.l!=='Note').map(t=>'<span class="tag" style="--h:'+t.h+'">'+t.l+'</span>').join(''):'';
+      /* occasions only, and only for a villa with an arrival today, so the room is set up for them; a remark with no occasion stays in the villa details */
+      const arrives=!!p.arr[v.id]||ARRIVING.includes(d.st[v.id]);
+      const arem=gr&&gr.rem?String(gr.rem).split(/\s*\|?\s*Departing guest:/)[0]:'';
+      const oc=arrives&&arem?remTags(arem).filter(t=>t.l!=='Note').map(t=>'<span class="tag" style="--h:'+t.h+'">'+t.l+'</span>').join(''):'';
       return '<div class="sv'+(hot?' hot':'')+(on?' done':'')+'"><button class="tick" data-act="sv-chk" data-v="'+esc(v.id)+'" aria-pressed="'+on+'" aria-label="'+esc(v.label)+' checked"><i>'+ICON_TICK+'</i></button>'+
         '<button class="svb" data-act="status" data-v="'+esc(v.id)+'" aria-label="Status for '+esc(v.label)+(hot?', next arrival':'')+'"><span class="svt"><span class="no">'+esc(v.label)+'</span>'+oc+chip(d.st[v.id])+(px?'<span class="pax">'+esc(px)+'</span>':'')+'</span>'+(tm?'<span class="eta">'+esc(tm)+'</span>':'')+'</button></div>'}).join('');
     return '<div class="supc" style="--h:'+supHue(x.id)+'"><div class="nm"><span>'+esc(x.name||'Unnamed')+'</span><b>'+vs.length+'</b></div>'+
