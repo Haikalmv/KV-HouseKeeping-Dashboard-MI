@@ -1,5 +1,5 @@
 /* Villa board offline support. Change the version when you upload new files. */
-const VERSION='villa-board-v21';
+const VERSION='villa-board-v26';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png'];
 const PDF='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
 const EXTRA=[PDF+'pdf.min.js',PDF+'pdf.worker.min.js'];
@@ -13,7 +13,7 @@ self.addEventListener('install',e=>{
   self.skipWaiting();
 });
 self.addEventListener('activate',e=>{
-  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==VERSION).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('villa-board-')&&k!==VERSION).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
 });
 self.addEventListener('fetch',e=>{
   const req=e.request;if(req.method!=='GET')return;
