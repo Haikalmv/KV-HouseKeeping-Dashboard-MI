@@ -94,6 +94,17 @@ h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance}
 .tile input{width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:var(--f-display);font-weight:700;font-size:26px;padding:0;font-variant-numeric:tabular-nums;min-height:30px}
 
 /* info panels */
+.occl{display:grid;gap:8px}
+.occr{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1.6fr) auto auto;gap:6px;align-items:center}
+.occr .tag{justify-self:start;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lvform .occr select{width:auto}
+@media (max-width:560px){
+  .occr{grid-template-columns:auto minmax(0,1fr) auto;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .occr input[data-f="occ-words"],.occr #occwords{grid-column:1/-1;grid-row:2}
+  .occr .btn{grid-column:3;grid-row:1}
+  .occr select{grid-column:1/3;grid-row:3;justify-self:start}
+  .occnew .btn{grid-row:3;grid-column:3}
+}
 .vfind{display:grid;gap:8px}
 /* Search01 icon from Hugeicons free set, MIT licence, Copyright (c) 2025 Hugeicons */
 .fbar{display:flex;align-items:center;gap:10px;border:2px solid var(--accent);background:var(--surface);border-radius:12px;padding:0 14px;min-height:50px;color:var(--accent);box-shadow:var(--shadow);cursor:text}
@@ -624,7 +635,7 @@ function touch(key){
   pend[key]=1;setSync('Saving…');clearTimeout(timers[key]);timers[key]=setTimeout(()=>flush(key),500);
 }
 function snap(key){
-  if(key==='staff')return {list:S.staff,roles:ROLES};
+  if(key==='staff')return {list:S.staff,roles:ROLES,occ:OCCS.map(o=>({id:o.id,name:o.name,words:o.words,h:o.h}))};
   if(key==='index')return {days:S.index};
   if(key==='layout')return {map:LAYOUT,du:DUROWS};
   if(key.startsWith('fc-'))return S.fcs[key.slice(3)]||{};
@@ -728,6 +739,8 @@ async function boot(){
     const st=await store.get('staff');
     if(st&&st.list){S.staff=st.list;S.staffSaved=true}else{S.staff=clone(BASE_STAFF)}
     /* staff lists saved before roles could be edited have no roles field and keep the default Other role */
+    /* staff lists saved before occasions could be edited have no occ field and start from the built-in occasions */
+    if(st&&Array.isArray(st.occ))OCCS=st.occ.filter(o=>o&&o.id&&typeof o.name==='string').map(o=>({id:String(o.id),name:o.name,words:String(o.words||''),h:+o.h||0}));
     if(st&&Array.isArray(st.roles))setRoles(st.roles.filter(r=>Array.isArray(r)&&r[0]&&r[1]&&!FIXED_RANKS.some(f=>f[0]===r[0])).map(r=>[String(r[0]),String(r[1]),String(r[2]||r[1])]));
     const ix=await store.get('index');S.index=(ix&&ix.days)||[];
     const lo=await store.get('layout');LAYOUT=(lo&&lo.map)||{};
@@ -862,10 +875,22 @@ function secBrief(sec){
 }
 
 /* ---------- guests and remarks ---------- */
-const TAGS=[['Honeymoon',/honey|\bHM\b|babymoon/i,330],['Anniversary',/anniv/i,10],['Birthday',/birth|b'?day/i,45],['VIP',/\bvip\b|svip/i,265],['Wedding',/wedding/i,200],['Repeater',/repeat|\bRPT\b|returning guest/i,160]];
+/* ---------- occasions ----------
+   each occasion has a name, the words that mark it in remarks (comma separated) and a colour hue. they are saved with the staff list, so backups carry them */
+const OCC_DEF=[['honeymoon','Honeymoon','honeymoon, HM',330],['anniv','Anniversary','anniversary, anniv',10],['bday','Birthday',"birthday, bday, b'day",45],['vip','VIP','VIP, SVIP',265],
+  ['wedding','Wedding','wedding',200],['repeater','Repeater','repeater, repeat guest, RPT, returning guest',160],['fam','FAM Trip','FAM trip, FAM',25]];
+let OCCS=OCC_DEF.map(o=>({id:o[0],name:o[1],words:o[2],h:o[3]}));
+const OCC_HUES=[['Pink',330],['Coral',10],['Red',0],['Orange',25],['Amber',45],['Green',140],['Mint',160],['Teal',185],['Sky',200],['Blue',220],['Indigo',240],['Purple',265]];
+/* the name always counts as a word. a word of 3 letters or less (HM, FAM) must stand alone; a longer one also matches longer words it starts, so honeymoon finds Honeymooners */
+function occRe(o){
+  const ws=[o.name].concat(String(o.words||'').split(',')).map(w=>String(w||'').trim().toLowerCase()).filter(Boolean);if(!ws.length)return null;
+  const e=w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s*');
+  return new RegExp(ws.map(w=>'(?:^|[^a-z0-9])'+e(w)+(w.length<=3?'(?![a-z0-9])':'')).join('|'),'i');
+}
+const occFound=t=>t?OCCS.filter(o=>o.name&&String(o.name).trim()&&(o.re||(o.re=occRe(o)))&&o.re.test(t)):[];
 function remTags(t){
   if(!t)return [];
-  const o=TAGS.filter(x=>x[1].test(t)).map(x=>({l:x[0],h:x[2]}));
+  const o=occFound(t).map(x=>({l:x.name,h:x.h}));
   return o.length?o:[{l:'Note',h:200}];
 }
 function gTxt(g){return g&&(g.ad||g.ch||g.inf)?(g.ad||0)+'A '+(g.ch||0)+'C '+(g.inf||0)+'I':''}
@@ -920,7 +945,7 @@ function villaHTML(id){
    '<div class="contact" id="vbutlerc">'+butlerContact(g.butler)+'</div>':'')+
    '<h4>Guests in villa</h4><div class="mvt">'+num('ad','Adults')+num('ch','Children')+num('inf','Infants')+'</div>'+
    '<h4>Stay</h4><div class="mvt"><label>Arrival date<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="arrD" value="'+esc(g.arrD||'')+'" placeholder="e.g. 22 Oct"></label><label>Departure date<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="depD" value="'+esc(g.depD||'')+'" placeholder="e.g. 1 Nov"></label><label>VIP level<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="vip" value="'+esc(g.vip||'')+'" placeholder="e.g. V03"></label><label>Country<input type="text" data-f="gtx" data-v="'+esc(id)+'" data-p="nat" value="'+esc(g.nat||'')+'" placeholder="e.g. GB"></label></div>'+
-   '<h4>Remarks (birthday, anniversary, honeymoon, repeater, requests)</h4><textarea id="vrem" rows="3" data-f="grem" data-v="'+esc(id)+'" placeholder="Honeymoon, anniversary, birthday, repeater, VIPs or any special request for housekeeping">'+esc(g.rem||'')+'</textarea>'+
+   '<h4>Remarks (occasions and requests)</h4><textarea id="vrem" rows="3" data-f="grem" data-v="'+esc(id)+'" placeholder="'+esc(OCCS.slice(0,4).map(o=>o.name).concat(['or any special request for housekeeping']).join(', '))+'">'+esc(g.rem||'')+'</textarea>'+
    (items.length?'<h4>Arrival, departure and moves</h4><div class="mvline">'+items.map(x=>'<div class="mv" style="--h:'+x.h+'">'+x.t+(x.d?' <i>(draft)</i>':'')+'</div>').join('')+'</div>':'')+
    '<h4>Section</h4><div class="vrow"><select id="vsec" data-f="vsec" data-v="'+esc(id)+'" aria-label="Move villa to another section">'+SECTIONS.map(s=>'<option value="'+s.n+'"'+(sec&&s.n===sec.n?' selected':'')+'>'+s.title+'</option>').join('')+'</select>'+(LAYOUT[id]?'<button class="btn sm" data-act="vorig" data-v="'+esc(id)+'">Back to original</button>':'')+'</div>'+duDel+'</div>';
 }
@@ -1231,6 +1256,7 @@ function staffHTML(){
       (L.map(row).join('')||'<p class="muted" style="margin:0;font-size:13px">Nobody yet.</p>')+'</div>'}).join('')+'</div>'+
   '<div class="panel lvform" style="max-width:720px"><h2>Add a role</h2><p class="muted" style="margin:0">Make a role for any other team, such as Butler or Laundry. Supervisor and Room attendant always stay. Removing a role moves its people to Room attendants.</p>'+
   '<div class="rolef"><input type="text" id="newrole" value="'+esc(S.roleText||'')+'" placeholder="Role name, for example Butler" aria-label="New role name"><button class="btn pri" data-act="role-add">Add role</button></div></div>'+
+  occPanelHTML()+
   '<div class="panel lvform" style="max-width:720px"><h2>Add a staff list</h2><p class="muted" style="margin:0">Upload a list, or type one person per line, name then number, for example: Ahmed Ali, 7001234. Everyone in the list is added with the rank you choose. Names already in the list are skipped.</p>'+
   '<div class="hbtns"><button class="btn" data-act="staff-file">Upload a list</button><span class="muted" style="font-size:13px">PDF, Excel, Word, CSV or text. Photos and screenshots work when the board is opened inside Claude.</span></div>'+
   (S.pasteMsg?'<div class="note"><span>'+esc(S.pasteMsg)+'</span></div>':'')+
@@ -1241,6 +1267,37 @@ function staffHTML(){
   '<input type="file" id="bkfile" accept="application/json,.json,.txt" hidden aria-label="Choose a backup file"></div>';
 }
 const pasteRank=()=>RANKS.some(r=>r[0]===S.pasteRank)?S.pasteRank:'ra';
+const hueSel=(h,attrs)=>'<select '+attrs+'>'+OCC_HUES.map(c=>'<option value="'+c[1]+'"'+(c[1]===+h?' selected':'')+'>'+c[0]+'</option>').join('')+'</select>';
+function occPanelHTML(){
+  const row=o=>{const arm=S.arm==='occ:'+o.id;
+    return '<div class="occr"><span class="tag" id="occt-'+esc(o.id)+'" style="--h:'+o.h+'">'+esc(o.name||'Unnamed')+'</span>'+
+      '<input type="text" data-f="occ-name" data-i="'+esc(o.id)+'" value="'+esc(o.name)+'" placeholder="Name" aria-label="Occasion name">'+
+      '<input type="text" data-f="occ-words" data-i="'+esc(o.id)+'" value="'+esc(o.words)+'" placeholder="Words in the remarks, comma separated" aria-label="Words for '+esc(o.name)+'">'+
+      hueSel(o.h,'data-f="occ-h" data-i="'+esc(o.id)+'" aria-label="Colour for '+esc(o.name)+'"')+
+      '<button class="btn sm'+(arm?' warm':'')+'" data-act="occ-del" data-i="'+esc(o.id)+'">'+(arm?'Tap again':'Remove')+'</button></div>'};
+  const used=OCCS.map(o=>+o.h),nh=(OCC_HUES.find(c=>!used.includes(c[1]))||OCC_HUES[0])[1];
+  return '<div class="panel lvform" style="max-width:720px"><h2>Occasions</h2><p class="muted" style="margin:0">A villa gets an occasion tag when its remarks contain the occasion\'s name or one of its words. Short words such as HM or FAM only count on their own; longer words also find longer forms, so honeymoon finds Honeymooners. Import the report again to tag guests already in house.</p>'+
+    '<div class="occl">'+(OCCS.map(row).join('')||'<p class="muted" style="margin:0;font-size:13px">No occasions yet.</p>')+'</div>'+
+    '<h3 style="margin:6px 0 0;font-size:15px">Add an occasion</h3><div class="occr occnew"><span class="tag" style="--h:'+(S.occH==null?nh:S.occH)+'">New</span>'+
+    '<input type="text" id="occname" value="'+esc(S.occName||'')+'" placeholder="Name, for example Babymoon" aria-label="New occasion name">'+
+    '<input type="text" id="occwords" value="'+esc(S.occWords||'')+'" placeholder="Words, for example babymoon, baby moon" aria-label="Words for the new occasion">'+
+    hueSel(S.occH==null?nh:S.occH,'id="occh" aria-label="Colour for the new occasion"')+
+    '<button class="btn pri sm" data-act="occ-add">Add occasion</button></div></div>';
+}
+function addOcc(){
+  const name=String(S.occName||'').trim().replace(/\s+/g,' ');
+  if(!name){toast('Type a name for the occasion');return}
+  if(OCCS.some(o=>String(o.name).trim().toUpperCase()===name.toUpperCase())){toast(name+' is already an occasion');return}
+  const h=$('#occh')?+$('#occh').value:0;
+  OCCS=OCCS.concat([{id:'o'+uid().slice(1),name,words:String(S.occWords||'').trim(),h}]);
+  S.occName='';S.occWords='';S.occH=null;S.staffSaved=true;touch('staff');render();
+  toast('Added the occasion '+name);
+}
+function removeOcc(id){
+  const o=OCCS.find(x=>x.id===id);if(!o)return;
+  OCCS=OCCS.filter(x=>x.id!==id);S.arm=null;touch('staff');render();
+  toast('Removed the occasion '+(o.name||''));
+}
 function addRole(){
   const box=$('#newrole'),name=(box?box.value:'').trim().replace(/\s+/g,' ');
   if(!name){toast('Type a name for the role');return}
@@ -1569,8 +1626,8 @@ async function applyReport(res){
     else if(c==='VAC'&&prevSt[id]==='VC')c='VC';
     if(c)st[id]=c;
   }));
-  const EV=[['Honeymoon',/honeymoon|\bHM\b/i],['Anniversary',/anniv/i],['Birthday',/birth|b'?day/i],['Repeater',/repeat|\bRPT\b|returning guest/i]];
-  const events=t=>EV.filter(x=>x[1].test(t||'')).map(x=>x[0]).join(', ');
+  /* only the occasions are kept from the report remarks, using the list on Staff & backup */
+  const events=t=>occFound(t||'').map(o=>o.name).join(', ');
   const ymd=t=>String(t||'').replace('-',' '),nn=r=>parseInt(r.nights,10)||0;
   const inf=(id,r)=>r.inf?r.inf:((old[id]&&old[id].inf)||'');
   const keep=id=>(old[id]&&old[id].rem)||(pg[id]&&pg[id].rem)||'';
@@ -1731,6 +1788,8 @@ document.addEventListener('click',e=>{
   else if(a==='bk-file'){const i=$('#bkfile');if(i)i.click()}
   else if(a==='staff-add'){const p={id:uid(),name:'',phone:'',role:b.dataset.r||'ra'};S.staff.push(p);S.staffSaved=true;touch('staff');render();const i=$('#sn-'+p.id);if(i)i.focus()}
   else if(a==='role-add')addRole();
+  else if(a==='occ-add')addOcc();
+  else if(a==='occ-del'){const k='occ:'+b.dataset.i;if(S.arm===k)removeOcc(b.dataset.i);else{S.arm=k;render()}}
   else if(a==='role-del'){const k='role:'+b.dataset.r;if(S.arm===k)removeRole(b.dataset.r);else{S.arm=k;render()}}
   else if(a==='staff-del'){
     const id=b.dataset.id;
@@ -1744,6 +1803,12 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#picker').hidde
 document.addEventListener('input',e=>{
   if(e.target.id==='staffpaste'){S.pasteText=e.target.value;return}
   if(e.target.id==='newrole'){S.roleText=e.target.value;return}
+  if(e.target.id==='occname'){S.occName=e.target.value;return}
+  if(e.target.id==='occwords'){S.occWords=e.target.value;return}
+  {const t=e.target,f=t.dataset&&t.dataset.f;
+    if(f==='occ-name'||f==='occ-words'){const o=OCCS.find(x=>x.id===t.dataset.i);if(!o)return;
+      if(f==='occ-name'){o.name=t.value;const tg=$('#occt-'+o.id);if(tg)tg.textContent=t.value.trim()||'Unnamed'}else o.words=t.value;
+      o.re=null;S.staffSaved=true;touch('staff');return}}
   const f=e.target.dataset&&e.target.dataset.f;if(!f)return;
   if(f==='vsearch'){S.q=e.target.value;$('#vsres').innerHTML=findHTML(S.q);return}
   if(f==='occupied'){const n=Math.max(0,parseInt(e.target.value,10)||0);S.day.fc=Object.assign({},S.day.fc,{occupied:n,pct:Math.round(n/SELLABLE.length*100)});S.day.fcAuto=false;touch('d-'+S.date)}
@@ -1765,6 +1830,8 @@ document.addEventListener('change',e=>{
   if(t.id==='pdatepick'){if(t.value){S.pdate=t.value;loadPlan(S.pdate).then(render);render()}return}
   if(t.id==='bkfile'){const fl=t.files&&t.files[0];t.value='';if(fl)restoreBackup(fl);return}
   if(t.id==='kvmfile'){const fl=t.files&&t.files[0];t.value='';if(fl)importFile(fl);return}
+  if(t.id==='occh'){S.occH=+t.value;render();return}
+  if(f==='occ-h'){const o=OCCS.find(x=>x.id===t.dataset.i);if(o){o.h=+t.value;S.staffSaved=true;touch('staff');render()}return}
   if(t.id==='stafffile'){const fl=t.files&&t.files[0];t.value='';if(fl)staffFromFile(fl);return}
   if(t.id==='pasterank'){S.pasteRank=t.value;const b=$('#staffpaste');if(b)S.pasteText=b.value;return}
   if(f==='srank'&&!S.day){const p=S.staff.find(x=>x.id===t.dataset.id);if(p){p.role=t.value;touch('staff');render()}return}
