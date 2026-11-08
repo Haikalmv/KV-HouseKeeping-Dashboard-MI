@@ -536,7 +536,7 @@ g.KVM={parseReport:parseReport};
 "use strict";
 /* ---------- constants ---------- */
 const GROUPS=[
- {name:'Occupancy',codes:[['OCC','Occupied',205,70],['VAC','Vacant',215,14],['B2B ARR','Back to back arrival',330,65],['B2B MV','Back to back villa move',280,55],['VC','Cleaned',150,60],['ARR','Arrival',318,60],['VMI','Villa move in',268,60],['VMO','Villa move out',245,45],['DEP','Departure',340,65],['OOO','Out of order',0,72]]},
+ {name:'Occupancy',codes:[['OCC','Occupied',205,70],['VAC','Vacant',215,14],['B2B ARR','Back to back arrival',330,65],['B2B MV','Back to back villa move',280,55],['VC','Cleaned',150,60],['ARR','Arrival',318,60],['VMI','Villa move in',268,60],['VMO','Villa move out',245,45],['DEP','Departure',340,65],['SV','Show villa',45,80],['OOO','Out of order',0,72]]},
  {name:'Maintenance',codes:[['OOS','Out of service',0,72,1]]}
 ];
 const LEAVE=[['OFF','Day off',200,60],['AL','Annual leave',150,60],['PH','Public holiday',36,85],['SL','Sick leave',0,70],['SP','Special leave',280,50]];
@@ -753,7 +753,7 @@ async function boot(){
 
 /* ---------- derived ---------- */
 /* the summary boxes that open a list of their rooms, and the statuses each one counts */
-const TLIST={vac:{t:'Vacant rooms',c:['VAC','VC']},arr:{t:'Arrivals',c:ARRIVING},dep:{t:'Departures',c:DEPARTING},
+const TLIST={vac:{t:'Vacant rooms',c:['VAC','VC','SV']},arr:{t:'Arrivals',c:ARRIVING},dep:{t:'Departures',c:DEPARTING},
   vm:{t:'Room moves',c:['VMI','B2B MV']},ooo:{t:'Out of order',c:['OOO']},oos:{t:'Out of service',c:['OOS']}};
 function tileListHTML(k){
   const T=TLIST[k],st=S.day.st,p=planOf(S.date),s=stats();
@@ -1623,7 +1623,8 @@ async function applyReport(res){
     if(!c&&res.inh[id])c='OCC';else if(!c&&haveInh)c='VAC';
     if(res.ooo&&res.ooo.includes(id))c='OOO';else if(res.oos&&res.oos.includes(id))c='OOS';
     else if(prevSt[id]==='OOO'||prevSt[id]==='OOS')c=prevSt[id];
-    else if(c==='VAC'&&prevSt[id]==='VC')c='VC';
+    /* a cleaned villa or a show villa stays so while the report still has it empty */
+    else if(c==='VAC'&&(prevSt[id]==='VC'||prevSt[id]==='SV'))c=prevSt[id];
     if(c)st[id]=c;
   }));
   /* only the occasions are kept from the report remarks, using the list on Staff & backup */
